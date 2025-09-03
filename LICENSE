@@ -1,0 +1,83 @@
+MIT License
+
+Copyright (c) 2024 Yash (Reevsay)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## 📄 License Notice
+
+This project is licensed under the MIT License, which means:
+
+✅ **You CAN:**
+- Use the software for any purpose (commercial or personal)
+- Modify the source code
+- Distribute copies
+- Include in proprietary software
+- Private use
+
+❌ **You CANNOT:**
+- Hold the authors liable for damages
+- Use the authors' names for endorsement without permission
+
+📋 **You MUST:**
+- Include the original license notice in any copy
+- Include the copyright notice
+
+## 🤝 Third-Party Licenses
+
+This project uses several open-source libraries. Here are their licenses:
+
+### 📦 **Core Dependencies**
+- **Express.js**: MIT License
+- **Opossum**: Apache License 2.0
+- **Prometheus**: Apache License 2.0
+- **Chart.js**: MIT License
+- **Socket.io**: MIT License
+
+### 🧪 **Development Dependencies**
+- **ESLint**: MIT License
+- **Prettier**: MIT License
+- **Jest**: MIT License
+- **Docker**: Apache License 2.0
+
+### 🎨 **UI Libraries**
+- **Inter Font**: SIL Open Font License 1.1
+- **CSS Animations**: Custom (MIT Compatible)
+
+## 🔍 **License Compatibility**
+
+All dependencies are compatible with MIT License terms and conditions.
+
+For a complete list of dependencies and their licenses, run:
+```bash
+npm list --depth=0
+npx license-checker
+```
+
+## 📞 **Contact**
+
+For licensing questions or commercial use inquiries:
+- GitHub: [@Reevsay](https://github.com/Reevsay)
+- Project: [AI Resilience Monitor](https://github.com/Reevsay/ai-resilience-monitor)
+
+---
+
+*This license applies to all code, documentation, and assets in this repository unless otherwise specified.*

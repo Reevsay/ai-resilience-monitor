@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Install dependencies
+        run: npm ci
+      - name: Run CI tests
+        run: npm run ci-test
+        env:
+          TEST_MODE: 'true'
+          FAIL_RATE: '0.5'
+          CORRUPT_RATE: '0.5'
+          DELAY_RATE: '0.5'
+          MIN_DELAY: '10'
+          MAX_DELAY: '100'

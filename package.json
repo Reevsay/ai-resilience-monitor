@@ -1,0 +1,39 @@
+{
+  "name": "devops-project",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "ci-test": "node test/ci-test.js",
+    "load-test": "node test/real-ai-load-tester.js --requests 10 --concurrency 2",
+    "load-test-small": "node test/real-ai-load-tester.js --requests 5 --concurrency 1",
+    "load-test-large": "node test/real-ai-load-tester.js --requests 50 --concurrency 3",
+    "test-huggingface": "node test/real-ai-load-tester.js --service=huggingface --requests 5",
+    "test-gemini": "node test/real-ai-load-tester.js --service=gemini --requests 5",
+    "test-cohere": "node test/real-ai-load-tester.js --service=cohere --requests 5",
+    "monitor": "node src/alertMonitor.js",
+    "test-alerts": "node src/alertMonitor.js test",
+    "dashboard-demo": "node tools/dashboard-demo.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@slack/webhook": "^7.0.6",
+    "axios": "^1.11.0",
+    "chart.js": "^4.5.0",
+    "express": "^5.1.0",
+    "nodemailer": "^7.0.6",
+    "opossum": "^9.0.0",
+    "prom-client": "^15.1.3",
+    "socket.io": "^4.8.1",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "chai": "^6.0.1",
+    "mocha": "^11.7.2",
+    "supertest": "^7.1.4"
+  }
+}
