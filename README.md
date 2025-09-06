@@ -37,9 +37,7 @@
 </tr>
 </table>
 
-## 🎯 Live Demo
 
-> **Try it yourself!** 🚀
 
 ```bash
 # One-command setup
@@ -272,10 +270,6 @@ graph TB
 - [🐳 **Docker Guide**](docs/DOCKER.md) - Containerization and orchestration
 - [🚀 **Deployment**](docs/DEPLOYMENT.md) - Production deployment strategies
 
-### 🎓 **Tutorials**
-- [💥 Chaos Engineering with AI Services](docs/tutorials/CHAOS_ENGINEERING.md)
-- [📊 Building Custom Dashboards](docs/tutorials/CUSTOM_DASHBOARDS.md)
-- [🔒 Circuit Breaker Patterns](docs/tutorials/CIRCUIT_BREAKER.md)
 
 ## 🛠️ Development
 
@@ -343,13 +337,6 @@ We love contributions! 🎉
 - [ ] 📊 **Custom ML Models** - Train your own monitoring models
 - [ ] 🌍 **Multi-Cloud** - AWS, Azure, GCP support
 
-## 🏆 Acknowledgments
-
-### 🙏 **Special Thanks**
-- **[Opossum](https://github.com/nodeshift/opossum)** - Excellent circuit breaker library
-- **[Prometheus](https://prometheus.io/)** - Monitoring and alerting toolkit
-- **[Chart.js](https://www.chartjs.org/)** - Beautiful charts and visualizations
-- **[Express.js](https://expressjs.com/)** - Fast, unopinionated web framework
 
 ### 🎨 **Design Inspiration**
 - Modern glassmorphism UI trends
