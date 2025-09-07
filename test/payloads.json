@@ -1,0 +1,8 @@
+{
+  "payloads": [
+    { "message": "Hello, how are you?", "service": "gemini" },
+    { "message": "Tell me a fun fact about space", "service": "gemini" },
+    { "message": "What is 2+2?", "service": "cohere" },
+    { "message": "Tell me a programming joke" }
+  ]
+}

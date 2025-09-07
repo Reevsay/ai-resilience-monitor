@@ -128,6 +128,7 @@ class MultiAIService {
   // Get available services with their status
   async checkServiceHealth() {
     const results = [];
+    const testMode = process.env.TEST_MODE === 'true';
     
     for (const service of this.services) {
       const apiKey = process.env[`${service.name.toUpperCase()}_API_KEY`];
@@ -138,7 +139,11 @@ class MultiAIService {
         endpoint: service.endpoint
       };
       
-      if (status.configured) {
+      if (testMode) {
+        // In TEST_MODE, simulate healthy services for demo purposes
+        status.healthy = true;
+        status.lastResponse = 'Simulated healthy (TEST_MODE)';
+      } else if (status.configured) {
         try {
           // Simple health check
           const response = await this.callAI("Hello", service.name);

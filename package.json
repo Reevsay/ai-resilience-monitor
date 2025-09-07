@@ -13,8 +13,7 @@
     "test-gemini": "node test/real-ai-load-tester.js --service=gemini --requests 5",
     "test-cohere": "node test/real-ai-load-tester.js --service=cohere --requests 5",
     "monitor": "node src/alertMonitor.js",
-    "test-alerts": "node src/alertMonitor.js test",
-    "dashboard-demo": "node tools/dashboard-demo.js"
+  "test-alerts": "node src/alertMonitor.js test"
   },
   "keywords": [],
   "author": "",
