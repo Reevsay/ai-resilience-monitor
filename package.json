@@ -1,0 +1,30 @@
+{
+  "name": "ai-resilience-monitor",
+  "version": "1.0.0",
+  "description": "A comprehensive chaos engineering platform for AI services",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ai",
+    "monitoring",
+    "chaos-engineering",
+    "resilience",
+    "dashboard"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.4.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.0",
+    "prom-client": "^14.2.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
