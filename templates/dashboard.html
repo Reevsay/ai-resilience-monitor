@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚀 AI Service Resilience Dashboard</title>
+    <title>🚀 AI Service Resilience Dashboard - UPDATED</title>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
         :root {
@@ -538,6 +538,122 @@
             box-shadow: var(--shadow);
         }
 
+        /* Health Dashboard Styles */
+        .health-dashboard {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 8px;
+        }
+
+        .health-service {
+            background: rgba(30, 41, 59, 0.6);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .health-service-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .health-service-icon {
+            font-size: 1.2rem;
+            margin-right: 8px;
+        }
+
+        .health-service-name {
+            flex: 1;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .health-score {
+            font-size: 1.1rem;
+            font-weight: 700;
+            min-width: 45px;
+            text-align: right;
+        }
+
+        .health-bar-container {
+            margin-top: 8px;
+        }
+
+        .health-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(100, 116, 139, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .health-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            background: linear-gradient(90deg, var(--error-red) 0%, var(--warning-yellow) 70%, var(--success-green) 90%);
+        }
+
+        .health-bar-fill.excellent {
+            background: var(--success-green);
+        }
+
+        .health-bar-fill.good {
+            background: var(--warning-yellow);
+        }
+
+        .health-bar-fill.poor {
+            background: var(--error-red);
+        }
+
+        .health-metrics {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .health-metric {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .health-legend {
+            display: flex;
+            gap: 8px;
+            font-size: 0.7rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.excellent {
+            background: var(--success-green);
+        }
+
+        .legend-dot.good {
+            background: var(--warning-yellow);
+        }
+
+        .legend-dot.poor {
+            background: var(--error-red);
+        }
+
         .insights-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -923,33 +1039,85 @@
                     </div>
                 </div>
 
-                <!-- Service Reliability Chart -->
+                <!-- Service Response Time Trends -->
                 <div class="analytics-card">
                     <div class="card-header">
-                        <h3>🎯 Service Reliability</h3>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="reliabilityChart" width="400" height="200"></canvas>
-                    </div>
-                </div>
-
-                <!-- Response Time Distribution -->
-                <div class="analytics-card">
-                    <div class="card-header">
-                        <h3>⏱️ Response Time Distribution</h3>
+                        <h3>📈 Service Response Time Trends</h3>
+                        <div class="chart-controls">
+                            <button id="clearLatencyChart" class="mini-btn">Clear</button>
+                        </div>
                     </div>
                     <div class="chart-container">
                         <canvas id="latencyChart" width="400" height="200"></canvas>
                     </div>
                 </div>
 
-                <!-- Service Usage Breakdown -->
+                <!-- Service Health Score Dashboard -->
                 <div class="analytics-card">
                     <div class="card-header">
-                        <h3>📈 Service Usage Breakdown</h3>
+                        <h3>� Service Health Score Dashboard</h3>
+                        <div class="chart-controls">
+                            <span class="health-legend">
+                                <span class="legend-item"><span class="legend-dot excellent"></span>Excellent (90-100%)</span>
+                                <span class="legend-item"><span class="legend-dot good"></span>Good (70-89%)</span>
+                                <span class="legend-item"><span class="legend-dot poor"></span>Poor (<70%)</span>
+                            </span>
+                        </div>
                     </div>
-                    <div class="chart-container">
-                        <canvas id="usageChart" width="400" height="200"></canvas>
+                    <div class="health-dashboard">
+                        <div class="health-service">
+                            <div class="health-service-header">
+                                <div class="health-service-icon">💎</div>
+                                <div class="health-service-name">Gemini</div>
+                                <div class="health-score" id="gemini-health-score">--</div>
+                            </div>
+                            <div class="health-bar-container">
+                                <div class="health-bar">
+                                    <div class="health-bar-fill" id="gemini-health-bar" style="width: 0%"></div>
+                                </div>
+                                <div class="health-metrics">
+                                    <span class="health-metric">Uptime: <span id="gemini-uptime">--%</span></span>
+                                    <span class="health-metric">Success: <span id="gemini-success">--%</span></span>
+                                    <span class="health-metric">Speed: <span id="gemini-speed">--ms</span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="health-service">
+                            <div class="health-service-header">
+                                <div class="health-service-icon">🧠</div>
+                                <div class="health-service-name">Cohere</div>
+                                <div class="health-score" id="cohere-health-score">--</div>
+                            </div>
+                            <div class="health-bar-container">
+                                <div class="health-bar">
+                                    <div class="health-bar-fill" id="cohere-health-bar" style="width: 0%"></div>
+                                </div>
+                                <div class="health-metrics">
+                                    <span class="health-metric">Uptime: <span id="cohere-uptime">--%</span></span>
+                                    <span class="health-metric">Success: <span id="cohere-success">--%</span></span>
+                                    <span class="health-metric">Speed: <span id="cohere-speed">--ms</span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="health-service">
+                            <div class="health-service-header">
+                                <div class="health-service-icon">🤗</div>
+                                <div class="health-service-name">Hugging Face</div>
+                                <div class="health-score" id="huggingface-health-score">--</div>
+                            </div>
+                            <div class="health-bar-container">
+                                <div class="health-bar">
+                                    <div class="health-bar-fill" id="huggingface-health-bar" style="width: 0%"></div>
+                                </div>
+                                <div class="health-metrics">
+                                    <span class="health-metric">Uptime: <span id="huggingface-uptime">--%</span></span>
+                                    <span class="health-metric">Success: <span id="huggingface-success">--%</span></span>
+                                    <span class="health-metric">Speed: <span id="huggingface-speed">--ms</span></span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1088,7 +1256,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         // Dashboard configuration and state
-        const BACKEND_URL = 'http://localhost:3000';
+        const BACKEND_URL = '';
         const POLLING_INTERVAL = 5000; // 5 seconds
         let isConnected = false;
         let retryCount = 0;
@@ -1439,7 +1607,6 @@
         // Chart instances
         let charts = {
             performance: null,
-            reliability: null,
             latency: null,
             usage: null
         };
@@ -1530,83 +1697,109 @@
                 }
             });
 
-            // Service Reliability Chart
-            const reliabilityCtx = document.getElementById('reliabilityChart').getContext('2d');
-            charts.reliability = new Chart(reliabilityCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['Gemini', 'Cohere', 'Hugging Face'],
-                    datasets: [{
-                        label: 'Success Rate (%)',
-                        data: [100, 100, 100],
-                        backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6'],
-                        borderColor: ['#059669', '#2563eb', '#7c3aed'],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    ...chartConfig,
-                    scales: {
-                        ...chartConfig.scales,
-                        y: { 
-                            ...chartConfig.scales.y,
-                            beginAtZero: true,
-                            max: 100,
-                            title: { display: true, text: 'Success Rate (%)' }
-                        }
-                    }
-                }
-            });
-
-            // Response Time Distribution
+            // Service Response Time Trends
             const latencyCtx = document.getElementById('latencyChart').getContext('2d');
             charts.latency = new Chart(latencyCtx, {
-                type: 'doughnut',
+                type: 'line',
                 data: {
-                    labels: ['Fast (<500ms)', 'Medium (500-2000ms)', 'Slow (>2000ms)'],
-                    datasets: [{
-                        data: [0, 0, 0],
-                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
-                    }]
+                    labels: [], // Time labels
+                    datasets: [
+                        {
+                            label: 'Gemini',
+                            data: [],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Cohere', 
+                            data: [],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Hugging Face',
+                            data: [],
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
                     plugins: {
                         legend: {
-                            position: 'bottom',
-                            labels: { font: { size: 10 } }
+                            position: 'top',
+                            labels: { 
+                                font: { size: 10 },
+                                color: '#f1f5f9',
+                                usePointStyle: true,
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#f1f5f9',
+                            bodyColor: '#f1f5f9',
+                            borderColor: '#3b82f6',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y}ms`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: { 
+                                display: true, 
+                                text: 'Time',
+                                color: '#94a3b8',
+                                font: { size: 10 }
+                            },
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                            ticks: { 
+                                color: '#94a3b8',
+                                font: { size: 9 },
+                                maxTicksLimit: 8
+                            }
+                        },
+                        y: {
+                            display: true,
+                            beginAtZero: true,
+                            title: { 
+                                display: true, 
+                                text: 'Response Time (ms)',
+                                color: '#94a3b8',
+                                font: { size: 10 }
+                            },
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                            ticks: { 
+                                color: '#94a3b8',
+                                font: { size: 9 }
+                            }
                         }
                     }
                 }
             });
 
-            // Service Usage Breakdown
-            const usageCtx = document.getElementById('usageChart').getContext('2d');
-            charts.usage = new Chart(usageCtx, {
-                type: 'pie',
-                data: {
-                    labels: ['Gemini', 'Cohere', 'Hugging Face'],
-                    datasets: [{
-                        data: [0, 0, 0],
-                        backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6'],
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { font: { size: 10 } }
-                        }
-                    }
-                }
-            });
+            // Service Health Dashboard - No chart initialization needed
+            // Health scores will be updated via updateHealthDashboard() function
         }
 
         // Setup automation controls
@@ -1614,6 +1807,7 @@
             const toggleBtn = document.getElementById('toggleAutomation');
             const intervalSelect = document.getElementById('requestInterval');
             const clearChartBtn = document.getElementById('clearChart');
+            const clearLatencyChartBtn = document.getElementById('clearLatencyChart');
             const exportBtn = document.getElementById('exportData');
             const clearHistoryBtn = document.getElementById('clearHistory');
 
@@ -1627,6 +1821,7 @@
             });
 
             clearChartBtn.addEventListener('click', clearCharts);
+            clearLatencyChartBtn.addEventListener('click', () => clearLatencyChart());
             exportBtn.addEventListener('click', exportAnalyticsData);
             clearHistoryBtn.addEventListener('click', clearAnalyticsHistory);
         }
@@ -1852,65 +2047,106 @@
                 charts.performance.update('none');
             }
 
-            // Update reliability chart
-            if (charts.reliability) {
+            // Update response time trends
+            if (charts.latency) {
+                const now = new Date().toLocaleTimeString();
                 const services = ['gemini', 'cohere', 'huggingface'];
-                const reliabilityData = services.map(service => {
-                    const stats = analyticsData.serviceStats[service];
-                    if (stats.requests === 0) return 100;
-                    return ((stats.requests - stats.failures) / stats.requests) * 100;
+                
+                // Add new time label
+                charts.latency.data.labels.push(now);
+                
+                // Keep only last 15 data points for clean visualization
+                if (charts.latency.data.labels.length > 15) {
+                    charts.latency.data.labels.shift();
+                    charts.latency.data.datasets.forEach(dataset => {
+                        if (dataset.data.length > 15) dataset.data.shift();
+                    });
+                }
+                
+                // Add new response time data for each service
+                services.forEach((service, index) => {
+                    const serviceStats = analyticsData.serviceStats[service];
+                    const avgLatency = serviceStats.requests > 0 
+                        ? (serviceStats.totalLatency / serviceStats.requests)
+                        : 0;
+                    
+                    charts.latency.data.datasets[index].data.push(Math.round(avgLatency));
                 });
                 
-                charts.reliability.data.datasets[0].data = reliabilityData;
-                charts.reliability.update('none');
-            }
-
-            // Update latency distribution
-            if (charts.latency) {
-                const latencies = analyticsData.requests
-                    .filter(r => r.success)
-                    .map(r => r.latency);
-                
-                const fast = latencies.filter(l => l < 500).length;
-                const medium = latencies.filter(l => l >= 500 && l <= 2000).length;
-                const slow = latencies.filter(l => l > 2000).length;
-                
-                charts.latency.data.datasets[0].data = [fast, medium, slow];
                 charts.latency.update('none');
             }
 
-            // Update usage chart
-            if (charts.usage) {
-                const services = ['gemini', 'cohere', 'huggingface'];
-                const usageData = services.map(service => 
-                    analyticsData.serviceStats[service].requests
-                );
+            // Update health dashboard
+            updateHealthDashboard();
+        }
+
+        // Update health dashboard
+        function updateHealthDashboard() {
+            const services = ['gemini', 'cohere', 'huggingface'];
+            
+            services.forEach(service => {
+                const stats = analyticsData.serviceStats[service];
                 
-                charts.usage.data.datasets[0].data = usageData;
-                charts.usage.update('none');
-            }
+                // Calculate health metrics
+                const uptime = stats.requests > 0 ? 
+                    ((stats.requests - stats.failures) / stats.requests) * 100 : 0;
+                    
+                const successRate = stats.requests > 0 ? 
+                    ((stats.requests - stats.failures) / stats.requests) * 100 : 0;
+                    
+                const avgSpeed = stats.requests > 0 && (stats.requests - stats.failures) > 0 ? 
+                    stats.totalLatency / (stats.requests - stats.failures) : 0;
+                
+                // Calculate overall health score (weighted average)
+                const speedScore = Math.max(0, Math.min(100, 100 - (avgSpeed / 20))); // Lower latency = higher score
+                const healthScore = Math.round((uptime * 0.4) + (successRate * 0.4) + (speedScore * 0.2));
+                
+                // Update UI elements
+                const healthScoreEl = document.getElementById(`${service}-health-score`);
+                const healthBarEl = document.getElementById(`${service}-health-bar`);
+                const uptimeEl = document.getElementById(`${service}-uptime`);
+                const successEl = document.getElementById(`${service}-success`);
+                const speedEl = document.getElementById(`${service}-speed`);
+                
+                if (healthScoreEl && healthBarEl && uptimeEl && successEl && speedEl) {
+                    // Update score and color
+                    healthScoreEl.textContent = `${healthScore}%`;
+                    healthBarEl.style.width = `${healthScore}%`;
+                    
+                    // Color coding based on health score
+                    let healthClass = 'poor';
+                    let healthColor = '#ef4444'; // red
+                    
+                    if (healthScore >= 90) {
+                        healthClass = 'excellent';
+                        healthColor = '#10b981'; // green
+                        healthScoreEl.style.color = '#10b981';
+                    } else if (healthScore >= 70) {
+                        healthClass = 'good';
+                        healthColor = '#f59e0b'; // yellow
+                        healthScoreEl.style.color = '#f59e0b';
+                    } else {
+                        healthScoreEl.style.color = '#ef4444';
+                    }
+                    
+                    healthBarEl.className = `health-bar-fill ${healthClass}`;
+                    healthBarEl.style.backgroundColor = healthColor;
+                    
+                    // Update individual metrics
+                    uptimeEl.textContent = `${uptime.toFixed(1)}%`;
+                    successEl.textContent = `${successRate.toFixed(1)}%`;
+                    speedEl.textContent = `${Math.round(avgSpeed)}ms`;
+                }
+            });
         }
 
         // Update key insights
         function updateInsights(metricsData) {
-            // Most reliable service
+            // Ensure we have the current list of services available for insight calculations
             const services = Object.keys(analyticsData.serviceStats);
-            let mostReliable = 'N/A';
-            let highestReliability = -1;
 
-            services.forEach(service => {
-                const stats = analyticsData.serviceStats[service];
-                if (stats.requests > 0) {
-                    const reliability = ((stats.requests - stats.failures) / stats.requests) * 100;
-                    if (reliability > highestReliability) {
-                        highestReliability = reliability;
-                        mostReliable = service.charAt(0).toUpperCase() + service.slice(1);
-                    }
-                }
-            });
-
-            document.getElementById('mostReliable').textContent = 
-                mostReliable !== 'N/A' ? `${mostReliable} (${highestReliability.toFixed(1)}%)` : mostReliable;
+            // Most reliable service (now handled by health dashboard)
+            document.getElementById('mostReliable').textContent = 'See Health Dashboard';
 
             // Fastest service
             let fastestService = 'N/A';
@@ -1988,6 +2224,7 @@
                         recoveryEl.style.color = 'var(--warning-yellow)';
                         timeEl.textContent = `${stats.recoveryTime.toFixed(1)}s recovery`;
                     } else if (stats.lastFailure) {
+                       
                         recoveryEl.textContent = 'Failed';
                         recoveryEl.style.color = 'var(--error-red)';
                         const timeSinceFailure = (Date.now() - stats.lastFailure) / 1000;
@@ -2199,6 +2436,17 @@
             
             updateCharts();
             updateInsights({});
+        }
+
+        // Clear latency trends chart only
+        function clearLatencyChart() {
+            if (charts.latency) {
+                charts.latency.data.labels = [];
+                charts.latency.data.datasets.forEach(dataset => {
+                    dataset.data = [];
+                });
+                charts.latency.update();
+            }
         }
 
         // Export analytics data as CSV

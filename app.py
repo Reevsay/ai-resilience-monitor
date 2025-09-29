@@ -6,7 +6,7 @@ A Flask web application serving a real-time dashboard for AI service monitoring.
 
 import sys
 import argparse
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 import requests
 import logging
 from datetime import datetime
@@ -84,7 +84,12 @@ api_client = DashboardAPI(BACKEND_URL)
 @app.route('/')
 def dashboard():
     """Serve the main dashboard page."""
-    return render_template('dashboard.html')
+    # Disable caching to ensure fresh content
+    response = app.make_response(render_template('dashboard.html'))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @app.route('/api/metrics')
 def api_metrics():
@@ -114,6 +119,27 @@ def api_status():
         "timestamp": datetime.now().isoformat(),
         "backend_url": BACKEND_URL
     })
+
+@app.route('/metrics')
+def proxy_metrics():
+    """Proxy metrics request to backend."""
+    try:
+        response = requests.get(f"{BACKEND_URL}/metrics", timeout=10)
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to proxy metrics: {e}")
+        return jsonify({"error": "Backend unavailable"}), 503
+
+@app.route('/ai', methods=['POST'])
+def proxy_ai():
+    """Proxy AI request to backend."""
+    try:
+        data = request.get_json()
+        response = requests.post(f"{BACKEND_URL}/ai", json=data, timeout=30)
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to proxy AI request: {e}")
+        return jsonify({"error": "Backend unavailable"}), 503
 
 @app.errorhandler(404)
 def not_found_error(error):
