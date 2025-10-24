@@ -50,5 +50,13 @@ build/
 .coverage
 htmlcov/
 
+# Database files (contains monitoring data)
+data/monitoring.db
+data/monitoring.db-journal
+data/export_*.json
+
+# Keep the data directory structure
+!data/README.md
+
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints
