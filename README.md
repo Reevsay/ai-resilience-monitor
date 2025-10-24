@@ -1,365 +1,477 @@
 # 🤖 AI Resilience Monitor
 
-<div align="center">
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-v18+-green.svg)](https://nodejs.org/)
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
+[![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)]()
 
-![AI Resilience Monitor](https://img.shields.io/badge/AI-Resilience%20Monitor-blue?style=for-the-badge&logo=robot)
-![Node.js](https://img.shields.io/badge/Node.js-18+-green?style=for-the-badge&logo=node.js)
-![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker)
-![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
+A comprehensive real-time monitoring dashboard for AI services featuring circuit breakers, chaos engineering, automated resilience testing, and advanced analytics. Built to ensure high availability and fault tolerance in AI-powered applications.
 
-**🛡️ Enterprise-grade AI service monitoring with circuit breakers, failure injection, and real-time resilience testing**
+## 📸 Screenshots
 
-[🚀 Quick Start](#-quick-start) • [📊 Features](#-features) • [🎯 Demo](#-live-demo) • [📚 Documentation](#-documentation) • [🤝 Contributing](#-contributing)
+> 🎯 **Dashboard v2.0.3** - Real-time monitoring with circuit breakers and chaos experiments
 
-</div>
+*(Add screenshots here)*
 
 ---
 
-## 🌟 What Makes This Special?
+## 🌟 Key Features
 
-<table>
-<tr>
-<td width="33%" align="center">
-<img src="https://github.com/user-attachments/assets/circuit-breaker-icon" width="80" height="80" alt="Circuit Breaker"/>
-<h3>🔒 Smart Circuit Breakers</h3>
-<p>Intelligent failure detection with automatic recovery and fallback mechanisms</p>
-</td>
-<td width="33%" align="center">
-<img src="https://github.com/user-attachments/assets/chaos-engineering-icon" width="80" height="80" alt="Chaos Engineering"/>
-<h3>💥 Chaos Engineering</h3>
-<p>Advanced failure injection for comprehensive resilience testing</p>
-</td>
-<td width="33%" align="center">
-<img src="https://github.com/user-attachments/assets/dashboard-icon" width="80" height="80" alt="Real-time Dashboard"/>
-<h3>📊 Live Dashboard</h3>
-<p>Beautiful real-time monitoring with animated charts and metrics</p>
-</td>
-</tr>
-</table>
+### 🔄 **AI Service Integration**
+- **Multi-provider Support**: Gemini, Cohere, HuggingFace
+- **Intelligent Fallback**: Automatic simulation when APIs are unavailable
+- **Real API Integration**: Use your own API keys or test with simulations
 
+### ⚡ **Circuit Breakers**
+- **Smart Failure Detection**: Automatically opens after threshold failures
+- **Half-Open State**: Gradual recovery testing
+- **Per-Service Isolation**: Independent circuit breakers for each AI service
+- **Real-time Monitoring**: Track state transitions (CLOSED → OPEN → HALF_OPEN)
 
+### 🔥 **Chaos Engineering**
+- **Latency Injection**: Test system behavior under slow responses (0-10s delays)
+- **Failure Simulation**: Force random failures at configurable rates
+- **Timeout Scenarios**: Test timeout handling (hang requests)
+- **Intermittent Issues**: Random failure patterns
+- **Service Unavailability**: Complete service outage simulation
+- **Response Corruption**: Test data integrity handling
 
-```bash
-# One-command setup
-docker compose up --build
+### 📊 **Real-time Analytics**
+- **Live Metrics**: Request count, success rate, latency tracking
+- **Interactive Charts**: Line charts with timestamps, bar charts, pie charts
+- **Performance Trends**: Historical data visualization with Chart.js
+- **Service Health**: Individual metrics per AI service
+- **Circuit Breaker States**: Visual state tracking
 
-# Then visit:
-� Dashboard: http://localhost:3000/dashboard
-📊 Metrics: http://localhost:3000/metrics
-🔍 AI Proxy: http://localhost:3000/ai
+### 🤖 **Automation**
+- **Automated Testing**: Send requests at configurable intervals (2-10 seconds)
+- **Custom Prompts**: Define test prompts for realistic scenarios
+- **Service Rotation**: Test all services automatically
+- **Background Execution**: Non-blocking automation
+
+### 💾 **Data Persistence**
+- **SQLite Database**: All requests logged with full details
+- **Historical Analysis**: Query past performance data
+- **Export Functionality**: JSON export for external analysis
+- **Request History**: View last 100+ requests with filtering
+
+### �️ **Resilience & Stability**
+- **Crash Protection**: Global error handlers prevent backend crashes
+- **Auto-recovery**: Circuit breakers automatically attempt recovery
+- **Graceful Degradation**: Fallback to simulation when APIs fail
+- **Error Logging**: Comprehensive error tracking and debugging
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Browser Dashboard                        │
+│  (http://localhost:8080) - React-like UI with Chart.js     │
+│  • Real-time charts • Analytics • Automation controls       │
+└────────────────┬────────────────────────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Flask Frontend Server (app.py)                  │
+│  Port: 8080 • Serves dashboard • Proxies requests           │
+│  • Database operations • Request logging                    │
+└────────────────┬────────────────────────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│           Node.js Backend (src/index.js)                     │
+│  Port: 3000 • AI service proxy • Circuit breakers           │
+│  • Chaos engineering • Prometheus metrics                   │
+│  • Global error handlers • Request validation               │
+└────────────────┬────────────────────────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│    AI Services (Gemini / Cohere / HuggingFace)              │
+│    Or Simulation Fallback (when APIs unavailable)           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-<details>
-<summary>🎬 <strong>Watch the Dashboard in Action!</strong></summary>
+---
 
-### 🔥 Real-time Features:
-- **Live Request Tracking** with color-coded status indicators
-- **Animated Circuit Breaker** visualization  
-- **Dynamic Charts** updating every 5 seconds
-- **Failure Injection** controls with instant feedback
-- **Service Health** monitoring with pulse animations
+## 🚀 Quick Start
 
-### 🎨 Visual Highlights:
-- **Blue-black gradient** theme with particle effects
-- **Smooth animations** and hover interactions
-- **Mobile responsive** design
-- **Professional glassmorphism** styling
+### Prerequisites
 
-</details>
+- **Node.js** v18+ ([Download](https://nodejs.org/))
+- **Python** 3.8+ ([Download](https://www.python.org/))
+- **Git** ([Download](https://git-scm.com/))
 
-## ⚡ Quick Start
+### Installation
 
-### 🐳 Option 1: Docker (Recommended)
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Reevsay/ai-resilience-monitor.git
+   cd ai-resilience-monitor
+   ```
+
+2. **Install Node.js dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Install Python dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure environment variables**
+   ```bash
+   # Copy the template
+   cp .env.template .env
+   
+   # Edit .env and add your API keys (optional)
+   # The system works with simulations if no API keys provided
+   ```
+
+5. **Start the backend** (Terminal 1)
+   ```bash
+   node src/index.js
+   ```
+
+6. **Start the frontend** (Terminal 2)
+   ```bash
+   python app.py
+   ```
+
+7. **Open your browser**
+   ```
+   http://localhost:8080
+   ```
+
+---
+
+## 📖 Usage Guide
+
+### Basic Operations
+
+#### 1️⃣ **Send Manual Request**
+- Select AI service (Gemini/Cohere/HuggingFace)
+- Enter a prompt (e.g., "What is machine learning?")
+- Click **"Send Request"**
+- View response and latency
+
+#### 2️⃣ **Start Automation**
+- Click **"Start Automation"**
+- Requests sent automatically every 2 seconds
+- Watch metrics update in real-time
+- Click **"Stop Automation"** to halt
+
+#### 3️⃣ **Inject Chaos Experiment**
+- Select service to test
+- Choose chaos type (Latency/Failure/Timeout/etc.)
+- Set intensity (0-100% or milliseconds)
+- Set duration (10-120 seconds)
+- Click **"Inject Chaos"**
+- Observe system behavior
+
+#### 4️⃣ **Monitor Circuit Breakers**
+- View current state (CLOSED/OPEN/HALF_OPEN)
+- Track failure counts and success counts
+- See state transition history
+- Reset breakers manually if needed
+
+#### 5️⃣ **View Historical Data**
+- Scroll to "Request History" section
+- Filter by service or time range
+- Export data to JSON
+- Analyze trends and patterns
+
+---
+
+## � Configuration
+
+### Environment Variables (.env)
+
 ```bash
-# Clone the repository
-git clone https://github.com/Reevsay/ai-resilience-monitor.git
-cd ai-resilience-monitor
+# Node.js Backend Port
+PORT=3000
 
-# Start everything with Docker
-docker compose up --build
+# AI Service API Keys (Optional - uses simulation if not provided)
+GOOGLE_API_KEY=your_gemini_api_key_here
+COHERE_API_KEY=your_cohere_api_key_here
+HUGGINGFACE_API_KEY=your_huggingface_api_key_here
 
-# 🎉 That's it! Your services are running:
-# 🌐 Dashboard: http://localhost:3000/dashboard
-# 📊 Metrics: http://localhost:3000/metrics
-# 🧠 Prometheus: http://localhost:9090
-# � Grafana: http://localhost:3001 (admin/admin by default)
+# API URLs (Optional - uses defaults)
+GOOGLE_API_URL=https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent
+COHERE_API_URL=https://api.cohere.ai/v1/generate
+HUGGINGFACE_API_URL=https://api-inference.huggingface.co/models/gpt2
 ```
 
-### 🛠️ Option 2: Local Development
-```bash
-# Install dependencies
-````
+### Circuit Breaker Settings
 
-### 3. Start Locally
-```bash
-npm start
+Located in `src/index.js`:
+
+```javascript
+const circuitBreakers = {
+  gemini: new CircuitBreaker('gemini', {
+    failureThreshold: 5,      // Failures before opening
+    successThreshold: 2,       // Successes to close from half-open
+    timeout: 30000,            // Time before trying half-open (30s)
+  }),
+  // ... similar for cohere and huggingface
+};
 ```
 
-## 📊 Dashboard Features
+---
 
-### Custom Dashboard (http://localhost:3000)
-Our custom-built dashboard provides:
+## 📊 Monitoring & Metrics
 
-#### Query Interface
-- **Dropdown Menu**: Pre-built metric queries
-- **Custom Input**: Type any Prometheus metric
-- **Live Execution**: Real-time query results
+### Available Endpoints
 
-#### Available Metrics
-- `ai_requests_total` - Total requests processed
-- `ai_fallbacks_total` - Circuit breaker fallbacks
-- `ai_failures_total` - Failed requests
-- `ai_circuit_state` - Circuit breaker state (0=closed, 1=open, 2=half-open)
-- `ai_request_latency_ms_*` - Request latency histograms
-- `process_cpu_user_seconds_total` - CPU usage
-- `nodejs_heap_size_used_bytes` - Memory usage
+**Backend (Port 3000):**
+- `GET /test` - Health check
+- `GET /metrics` - Current metrics JSON
+- `POST /ai` - AI service proxy
+- `GET /ai/health` - AI services health status
+- `GET /prometheus` - Prometheus metrics
 
-#### Visualization Types
-- **Stat Panels**: Large number displays with color coding
-- **Time Series**: Real-time charts with 20-point history
-- **Gauge Panels**: Circuit breaker state with status indicators
-- **Auto-refresh**: 5s, 10s, 30s, 1m, or manual
+**Chaos Engineering:**
+- `POST /chaos/inject` - Inject chaos experiment
+- `POST /chaos/stop` - Stop chaos experiment
+- `GET /chaos/status` - Get active experiments
+
+**Circuit Breakers:**
+- `GET /circuit-breaker/status` - Get all breaker states
+- `POST /circuit-breaker/reset` - Reset breakers
+
+**Frontend (Port 8080):**
+- `GET /` - Dashboard UI
+- `GET /api/metrics` - Metrics API
+- `POST /api/log-request` - Log request to database
+- `GET /api/history/requests` - Get request history
+- `GET /api/database/stats` - Database statistics
+
+---
 
 ## 🧪 Testing
 
-### Load Testing Commands
-```bash
-# Quick test (50 requests, 5 concurrent)
-npm run load-test-quick
+### Manual Testing
+1. Start both services
+2. Open dashboard
+3. Send requests manually
+4. Verify metrics update correctly
 
-# Stress test (500 requests, 20 concurrent)
-npm run load-test-stress
+### Automated Testing
+1. Click "Start Automation"
+2. Let run for 5-10 minutes
+3. Verify:
+   - Success rate is accurate
+   - Charts update correctly
+   - Circuit breakers respond to failures
+   - Database logs all requests
 
-# Duration test (60 seconds with 10s ramp-up)
-npm run load-test-duration
+### Chaos Testing
+1. Inject latency (5000ms) on Gemini
+2. Observe increased latency in charts
+3. Inject failures (80% rate) on Cohere
+4. Watch circuit breaker open after 5 failures
+5. Stop chaos and verify recovery
 
-# Custom test
-node test/load-tester.js --requests 100 --concurrency 10
+---
+
+## � Project Structure
+
 ```
-
-### CI Testing
-```bash
-# Run all CI tests
-npm run ci-test
-
-# Test metrics endpoint
-npm run metrics-test
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-#### Failure Injection Rates (0.0 - 1.0)
-```bash
-FAIL_RATE=0.1                    # 10% basic failures
-DELAY_RATE=0.1                   # 10% delay injection
-MIN_DELAY=50                     # Minimum delay (ms)
-MAX_DELAY=200                    # Maximum delay (ms)
-CORRUPT_RATE=0.05                # 5% data corruption
-NETWORK_ERROR_RATE=0.05          # 5% network errors
-MEMORY_ERROR_RATE=0.02           # 2% memory errors
-AUTH_ERROR_RATE=0.03             # 3% auth errors
-RATE_LIMIT_ERROR_RATE=0.02       # 2% rate limit errors
-PARTIAL_RESPONSE_RATE=0.05       # 5% partial responses
-SLOW_RESPONSE_RATE=0.02          # 2% slow responses
-```
-
-#### Service Configuration
-```bash
-PORT=3000                        # Service port
-TEST_MODE=true                   # Enable test mode (echoes requests)
-AI_ENDPOINT=https://api.ai.com   # Real AI service endpoint
-AI_API_KEY=your-key-here         # AI service API key
-```
-
-#### Monitoring & Alerts
-```bash
-MONITORING_INTERVAL_SEC=30       # Alert check interval
-ALERT_FAILURE_RATE=0.5          # Alert when >50% failures
-ALERT_FALLBACK_RATE=0.8         # Alert when >80% fallbacks
-ALERT_AVG_LATENCY_MS=5000       # Alert when >5s latency
-ALERT_CIRCUIT_OPEN_DURATION_SEC=300  # Alert if circuit open >5min
-```
-
-#### Notifications
-```bash
-# Slack
-SLACK_WEBHOOK_URL=https://hooks.slack.com/...
-
-# Email (SMTP)
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-app-password
-ALERT_EMAIL_TO=admin@company.com
-ALERT_EMAIL_FROM=alerts@company.com
-```
-
-## 🚨 Alerting
-
-### Start Alert Monitor
-```bash
-npm run monitor
-```
-
-### Test Notifications
-```bash
-npm run test-alerts
-```
-
-### Alert Conditions
-- **High Failure Rate**: >50% requests failing
-- **High Fallback Rate**: >80% requests using fallback
-- **High Latency**: Average >5 seconds
-- **Circuit Stuck Open**: Open for >5 minutes
-- **Service Unreachable**: Cannot fetch metrics
-
-## 📈 Metrics Reference
-
-### Custom Metrics
-| Metric | Type | Description |
-|--------|------|-------------|
-| `ai_requests_total` | Counter | Total successful AI requests |
-| `ai_fallbacks_total` | Counter | Total fallback responses |
-| `ai_failures_total` | Counter | Total failed requests |
-| `ai_request_latency_ms` | Histogram | Request latency distribution |
-| `ai_circuit_state` | Gauge | Circuit breaker state |
-
-### System Metrics (Auto-collected)
-- Process CPU usage
-- Memory usage (heap/RSS)
-- Event loop lag
-- Garbage collection timing
-- Active handles/requests
-
-## 🛠️ Development
-
-### Project Structure
-```
+ai-resilience-monitor/
 ├── src/
-│   ├── index.js              # Main server
-│   ├── app.js                # Express app (testable)
-│   ├── failureInjector.js    # Failure injection utilities
-│   ├── notificationService.js # Email/Slack alerts
-│   ├── alertMonitor.js       # Monitoring daemon
-│   └── dashboard.html        # Custom dashboard
-├── test/
-│   ├── ci-test.js           # CI pipeline tests
-│   ├── metrics-test.js      # Metrics validation
-│   └── load-tester.js       # Load testing utility
-├── .github/workflows/
-│   └── ci.yml               # GitHub Actions pipeline
-├── docker-compose.yml        # Multi-service setup
-├── Dockerfile               # Container definition
-└── prometheus.yml           # Prometheus config
-```
-
-### Adding New Failure Types
-1. Add function to `failureInjector.js`
-2. Import in `app.js` and `index.js`
-3. Add environment variable parsing
-4. Integrate in `unreliableAIService()` function
-5. Update docker-compose.yml with new env vars
-
-### Custom Metrics
-```javascript
-const customMetric = new client.Counter({
-  name: 'my_custom_metric',
-  help: 'Description of metric'
-});
-
-// In your code
-customMetric.inc();
-```
-
-## 🚀 Deployment
-
-### Docker Production
-```bash
-# Build and push
-docker build -t ai-resilience-monitor .
-docker push your-registry/ai-resilience-monitor
-
-# Deploy
-docker run -d \
-  -p 3000:3000 \
-  -e FAIL_RATE=0.05 \
-  -e SLACK_WEBHOOK_URL=your-webhook \
-  your-registry/ai-resilience-monitor
-```
-
-### Kubernetes
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ai-resilience-monitor
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: ai-resilience-monitor
-  template:
-    metadata:
-      labels:
-        app: ai-resilience-monitor
-    spec:
-      containers:
-      - name: ai-resilience-monitor
-        image: your-registry/ai-resilience-monitor
-        ports:
-        - containerPort: 3000
-        env:
-        - name: FAIL_RATE
-          value: "0.05"
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Troubleshooting
-
-### Common Issues
-
-**Dashboard not loading:**
-- Check if service is running on port 3000
-- Verify CORS headers are enabled
-- Check browser console for errors
-
-**Metrics showing zero:**
-- Ensure TEST_MODE=true is set
-- Verify Prometheus is scraping correctly
-- Check if requests are actually being made
-
-**Alerts not working:**
-- Verify webhook URLs and email credentials
-- Check environment variables are set
-- Test with `npm run test-alerts`
-
-### Debug Commands
-```bash
-# Check container logs
-docker logs devopsproject-ai-proxy-1
-
-# Check metrics directly
-curl http://localhost:3000/metrics
-
-# Test API endpoint
-curl -X POST http://localhost:3000/ai \
-  -H "Content-Type: application/json" \
-  -d '{"message": "test"}'
+│   └── index.js              # Node.js backend (1105 lines)
+├── templates/
+│   └── dashboard.html        # Frontend UI (3985 lines)
+├── app.py                    # Flask server (493 lines)
+├── database.py               # SQLite handler (488 lines)
+├── checkpoints/              # Project snapshots
+│   ├── checkpoint2/          # Production-ready state
+│   └── CHECKPOINTS_INDEX.md
+├── documentation/            # Research & docs
+│   ├── FLOWCHART_PROMPTS.md
+│   ├── RESEARCH_GAPS.md
+│   └── ...
+├── literature/               # Research papers
+├── data/                     # SQLite database
+├── package.json              # Node.js dependencies
+├── requirements.txt          # Python dependencies
+├── .env.template             # Environment template
+├── .gitignore               # Git ignore rules
+├── CLEANUP_REPORT.md        # Cleanup documentation
+└── README.md                # This file
 ```
 
 ---
 
-**Built with ❤️ for resilient AI systems**
+## 🛠️ Technologies Used
+
+### Backend
+- **Node.js** - JavaScript runtime
+- **Express.js** - Web framework
+- **Axios** - HTTP client for API calls
+- **prom-client** - Prometheus metrics
+
+### Frontend
+- **Flask** - Python web framework
+- **HTML5/CSS3** - Modern web standards
+- **JavaScript (ES6+)** - Client-side logic
+- **Chart.js** - Data visualization
+- **Bootstrap** - UI components
+
+### Database
+- **SQLite** - Lightweight database
+- **Python sqlite3** - Database interface
+
+### DevOps & Monitoring
+- **Prometheus** - Metrics collection
+- **Circuit Breakers** - Fault tolerance
+- **Chaos Engineering** - Resilience testing
+
+---
+
+## � Security Notes
+
+- **API Keys**: Never commit `.env` to Git (already in `.gitignore`)
+- **CORS**: Currently set to allow all origins (`*`) - restrict in production
+- **Rate Limiting**: Not implemented - add for production use
+- **Authentication**: Not implemented - add for production deployment
+- **HTTPS**: Use reverse proxy (nginx/Apache) for production
+
+---
+
+## 🐛 Troubleshooting
+
+### Backend won't start
+```bash
+# Check if port 3000 is in use
+netstat -ano | findstr :3000
+
+# Kill the process if needed
+taskkill /PID <process_id> /F
+
+# Restart backend
+node src/index.js
+```
+
+### Frontend shows "Backend Offline"
+- Ensure backend is running on port 3000
+- Check backend terminal for errors
+- Verify `BACKEND_URL` in `app.py` is correct
+
+### Database errors
+```bash
+# Backup current database
+cp data/monitoring.db data/monitoring.db.backup
+
+# Delete and recreate
+rm data/monitoring.db
+python app.py  # Will recreate tables
+```
+
+### Circuit breakers stuck OPEN
+- Click "Reset All Circuit Breakers" button
+- Or restart the backend service
+
+---
+
+## 📈 Performance
+
+- **Backend Memory**: ~50-70 MB
+- **Frontend Memory**: ~20-30 MB
+- **Database Size**: ~1-2 KB per request
+- **Max Throughput**: 100+ requests/second (simulated)
+- **Latency Tracking**: Last 15 entries per service
+- **Uptime**: Indefinite (with error handlers)
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Coding Standards
+- **JavaScript**: Use ES6+ syntax, async/await
+- **Python**: Follow PEP 8
+- **Comments**: Document complex logic
+- **Commits**: Use descriptive messages
+
+---
+
+## 📝 Changelog
+
+### v2.0.3 (Current - October 24, 2024)
+- ✅ Backend crash protection with global error handlers
+- ✅ Accurate metrics (Total = Success + Failure)
+- ✅ Line charts with real timestamps (HH:MM:SS)
+- ✅ Circuit breakers wrap simulation fallback correctly
+- ✅ Timestamp string-to-Date conversion fixes
+- ✅ Project cleanup (15 unused files removed)
+- ✅ Comprehensive documentation
+
+### v2.0.2
+- Circuit breaker state management improvements
+- Chaos engineering enhancements
+
+### v2.0.1
+- Initial stable release
+- Basic monitoring and circuit breakers
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 👥 Authors
+
+- **Yashveer Ahlawat** - *Initial work* - [Reevsay](https://github.com/Reevsay)
+
+---
+
+## 🙏 Acknowledgments
+
+- Circuit breaker pattern inspired by Michael Nygard's "Release It!"
+- Chaos engineering concepts from Netflix's Chaos Monkey
+- UI/UX inspired by Grafana and Prometheus dashboards
+
+---
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/Reevsay/ai-resilience-monitor/issues)
+- **Email**: yashveer4661ahlawat@gmail.com
+- **Documentation**: See `/documentation` folder for research papers
+
+---
+
+## 🎯 Roadmap
+
+- [ ] Docker containerization
+- [ ] Kubernetes deployment configs
+- [ ] Real-time alerts (Email/Slack)
+- [ ] Multi-user authentication
+- [ ] Advanced analytics dashboard
+- [ ] Load testing suite
+- [ ] CI/CD pipeline
+- [ ] API documentation (Swagger)
+
+---
+
+<div align="center">
+
+**⭐ Star this repo if you find it helpful!**
+
+Made with ❤️ for resilient AI systems
+
+</div>

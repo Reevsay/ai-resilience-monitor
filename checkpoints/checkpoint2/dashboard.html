@@ -1,0 +1,3985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 AI Service Resilience Dashboard - UPDATED</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        :root {
+            --primary-blue: #3b82f6;
+            --primary-blue-dark: #1e40af;
+            --success-green: #10b981;
+            --warning-yellow: #f59e0b;
+            --error-red: #ef4444;
+            --neutral-gray: #64748b;
+            --background: #0f172a;
+            --card-bg: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --shadow: 0 4px 6px rgba(0,0,0,0.4);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.5);
+            --border-color: #334155;
+            --accent-glow: #3b82f6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            max-width: 100vw;
+            margin: 0 auto;
+            padding: 12px;
+            height: 100vh;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 8px;
+            overflow: hidden;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            overflow-y: auto;
+            padding-left: 4px;
+            padding-left: 4px;
+        }
+
+        /* Header Section */
+        .header {
+            background: linear-gradient(135deg, var(--card-bg) 0%, var(--primary-blue-dark) 100%);
+            border-radius: 8px;
+            padding: 12px 16px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid var(--border-color);
+            min-height: 60px;
+        }
+
+        .header-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-connected {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-green);
+        }
+
+        .status-disconnected {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error-red);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-live {
+            background: var(--success-green);
+            animation: pulse 2s infinite;
+        }
+
+        .status-error {
+            background: var(--error-red);
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .last-updated {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Metrics Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            grid-column: 1 / -1;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, var(--card-bg) 0%, var(--primary-blue-dark) 100%);
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-blue), var(--success-green));
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+            margin-bottom: 8px;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .metric-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .metric-change {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Services Grid */
+        .services-section {
+            margin-top: 32px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .service-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .service-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .service-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .service-icon {
+            font-size: 2rem;
+        }
+
+        .service-name {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .status-healthy {
+            color: var(--success-green);
+        }
+
+        .status-warning {
+            color: var(--warning-yellow);
+        }
+
+        .status-error {
+            color: var(--error-red);
+        }
+
+        .service-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        .service-metric {
+            text-align: center;
+        }
+
+        .service-metric-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--primary-blue);
+        }
+
+        .service-metric-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Chaos Engineering Styles */
+        .chaos-section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .toggle-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+            color: var(--text-secondary);
+        }
+
+        .toggle-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .chaos-panel {
+            margin-top: 16px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+        }
+
+        .chaos-panel.collapsed {
+            max-height: 0 !important;
+            opacity: 0;
+            margin-top: 0;
+        }
+
+        .chaos-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 16px;
+            background: rgba(59, 130, 246, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .control-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-row label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .chaos-select, .chaos-input {
+            padding: 10px 12px;
+            background: var(--background);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .chaos-select:hover, .chaos-input:hover {
+            border-color: var(--primary-blue);
+        }
+
+        .chaos-select:focus, .chaos-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .chaos-slider {
+            width: 100%;
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .chaos-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--primary-blue);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .chaos-slider::-webkit-slider-thumb:hover {
+            background: var(--primary-blue-dark);
+            transform: scale(1.2);
+        }
+
+        .chaos-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: var(--primary-blue);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .intensity-help {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-top: 2px;
+        }
+
+        .button-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .chaos-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .inject-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .inject-btn:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .inject-btn:active {
+            transform: translateY(0);
+        }
+
+        .stop-btn {
+            background: var(--neutral-gray);
+            color: white;
+        }
+
+        .stop-btn:hover {
+            background: #475569;
+            transform: translateY(-2px);
+        }
+
+        .active-experiments {
+            margin-top: 16px;
+            padding: 16px;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .experiments-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        .experiments-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .no-experiments {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-style: italic;
+            text-align: center;
+            padding: 12px;
+        }
+
+        .experiment-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid var(--error-red);
+        }
+
+        .experiment-info {
+            flex: 1;
+        }
+
+        .experiment-service {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .experiment-details {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .experiment-timer {
+            font-size: 0.85rem;
+            color: var(--warning-yellow);
+            font-weight: 600;
+            margin: 0 12px;
+        }
+
+        .experiment-stop-btn {
+            padding: 6px 12px;
+            background: var(--error-red);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .experiment-stop-btn:hover {
+            background: #dc2626;
+            transform: scale(1.05);
+        }
+
+        .chaos-badge {
+            display: inline-block;
+            background: var(--error-red);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-left: 8px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .service-card.chaos-active {
+            border-color: var(--error-red);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+
+        /* Loading and Error States */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error-red);
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--text-secondary);
+            border-radius: 50%;
+            border-top-color: var(--primary-blue);
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 16px;
+            }
+
+            .header {
+                padding: 20px;
+                text-align: center;
+            }
+
+            .header-title {
+                font-size: 1.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metric-value {
+                font-size: 2rem;
+            }
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none;
+        }
+
+        .text-success {
+            color: var(--success-green);
+        }
+
+        .text-warning {
+            color: var(--warning-yellow);
+        }
+
+        .text-error {
+            color: var(--error-red);
+        }
+
+        .bg-success {
+            background-color: var(--success-green);
+        }
+
+        .bg-warning {
+            background-color: var(--warning-yellow);
+        }
+
+        .bg-error {
+            background-color: var(--error-red);
+        }
+
+        .bg-neutral-gray {
+            background-color: var(--neutral-gray);
+        }
+
+        .text-secondary {
+            color: var(--text-secondary);
+        }
+
+        /* Analytics Section Styles */
+        .analytics-section {
+            margin-top: 40px;
+        }
+
+        .analytics-controls {
+            background: linear-gradient(135deg, var(--card-bg) 0%, var(--primary-blue-dark) 100%);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            min-width: fit-content;
+        }
+
+        .service-selector {
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 200px;
+        }
+
+        .service-selector:hover {
+            border-color: var(--primary-blue);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .service-selector:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, var(--primary-blue), var(--accent-purple));
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+            box-shadow: var(--shadow);
+        }
+
+        .control-btn:hover {
+            background: linear-gradient(135deg, var(--primary-blue-dark), var(--accent-purple));
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .automation-stopped {
+            background: var(--success-green);
+        }
+
+        .automation-running {
+            background: var(--error-red);
+        }
+
+        .automation-status {
+            display: flex;
+            flex-direction: column;
+            font-size: 0.85rem;
+        }
+
+        .automation-status span:first-child {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .automation-status span:last-child {
+            color: var(--text-primary);
+            opacity: 0.8;
+        }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        .analytics-card {
+            background: linear-gradient(135deg, var(--card-bg) 0%, var(--primary-blue-dark) 100%);
+            border-radius: 6px;
+            padding: 12px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+
+        .analytics-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .analytics-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .analytics-card.metrics-summary {
+            min-height: 300px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .card-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .mini-btn {
+            background: var(--neutral-gray);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mini-btn:hover {
+            background: #4b5563;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+        }
+
+        /* Health Dashboard Styles */
+        .health-dashboard {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 8px;
+        }
+
+        /* Leaderboard Styles */
+        .leaderboard-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 12px;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: rgba(30, 41, 59, 0.6);
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .leaderboard-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .leaderboard-item.rank-1 {
+            border-color: #ffd700;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(30, 41, 59, 0.6) 100%);
+        }
+
+        .leaderboard-item.rank-2 {
+            border-color: #c0c0c0;
+            background: linear-gradient(135deg, rgba(192, 192, 192, 0.1) 0%, rgba(30, 41, 59, 0.6) 100%);
+        }
+
+        .leaderboard-item.rank-3 {
+            border-color: #cd7f32;
+            background: linear-gradient(135deg, rgba(205, 127, 50, 0.1) 0%, rgba(30, 41, 59, 0.6) 100%);
+        }
+
+        .rank-badge {
+            font-size: 2.5rem;
+            min-width: 60px;
+            text-align: center;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .service-info {
+            flex: 1;
+        }
+
+        .service-name-rank {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .service-icon-rank {
+            font-size: 1.5rem;
+        }
+
+        .service-stats-rank {
+            display: flex;
+            gap: 20px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+        }
+
+        .stat-item-rank {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .stat-label-rank {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.8;
+        }
+
+        .stat-value-rank {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .stat-value-rank.success {
+            color: var(--success-green);
+        }
+
+        .stat-value-rank.warning {
+            color: var(--warning-yellow);
+        }
+
+        .stat-value-rank.error {
+            color: var(--error-red);
+        }
+
+        /* Circuit Breaker Styles */
+        .circuit-breaker-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 12px;
+        }
+
+        .circuit-breaker-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background: rgba(30, 41, 59, 0.6);
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .circuit-breaker-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--neutral-gray);
+            transition: all 0.3s ease;
+        }
+
+        .circuit-breaker-item.state-closed::before {
+            background: var(--success-green);
+            box-shadow: 0 0 10px var(--success-green);
+        }
+
+        .circuit-breaker-item.state-open::before {
+            background: var(--error-red);
+            box-shadow: 0 0 10px var(--error-red);
+            animation: pulse-danger 2s ease-in-out infinite;
+        }
+
+        .circuit-breaker-item.state-half-open::before {
+            background: var(--warning-yellow);
+            box-shadow: 0 0 10px var(--warning-yellow);
+            animation: pulse-warning 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-danger {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes pulse-warning {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .cb-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex: 1;
+        }
+
+        .cb-service {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 140px;
+        }
+
+        .cb-service-icon {
+            font-size: 1.3rem;
+        }
+
+        .cb-state {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .cb-state.CLOSED {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success-green);
+            border: 1px solid var(--success-green);
+        }
+
+        .cb-state.OPEN {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error-red);
+            border: 1px solid var(--error-red);
+        }
+
+        .cb-state.HALF_OPEN {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning-yellow);
+            border: 1px solid var(--warning-yellow);
+        }
+
+        .cb-metrics {
+            display: flex;
+            gap: 16px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .cb-metric {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .cb-metric-label {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            text-transform: uppercase;
+        }
+
+        .cb-metric-value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .cb-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .cb-reset-btn {
+            padding: 6px 12px;
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid var(--primary-blue);
+            color: var(--primary-blue);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .cb-reset-btn:hover {
+            background: rgba(59, 130, 246, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        .performance-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .performance-badge.excellent {
+            background: var(--success-green);
+            color: white;
+        }
+
+        .performance-badge.good {
+            background: var(--warning-yellow);
+            color: white;
+        }
+
+        .performance-badge.poor {
+            background: var(--error-red);
+            color: white;
+        }
+
+        .health-service {
+            background: rgba(30, 41, 59, 0.6);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .health-service-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .health-service-icon {
+            font-size: 1.2rem;
+            margin-right: 8px;
+        }
+
+        .health-service-name {
+            flex: 1;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .health-score {
+            font-size: 1.1rem;
+            font-weight: 700;
+            min-width: 45px;
+            text-align: right;
+        }
+
+        .health-bar-container {
+            margin-top: 8px;
+        }
+
+        .health-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(100, 116, 139, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .health-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            background: linear-gradient(90deg, var(--error-red) 0%, var(--warning-yellow) 70%, var(--success-green) 90%);
+        }
+
+        .health-bar-fill.excellent {
+            background: var(--success-green);
+        }
+
+        .health-bar-fill.good {
+            background: var(--warning-yellow);
+        }
+
+        .health-bar-fill.poor {
+            background: var(--error-red);
+        }
+
+        .health-metrics {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .health-metric {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .health-legend {
+            display: flex;
+            gap: 8px;
+            font-size: 0.7rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.excellent {
+            background: var(--success-green);
+        }
+
+        .legend-dot.good {
+            background: var(--warning-yellow);
+        }
+
+        .legend-dot.poor {
+            background: var(--error-red);
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .insight-item {
+            text-align: center;
+            padding: 12px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        /* Advanced Analytics Styles */
+        .recovery-section, .error-patterns-section, .trends-section {
+            margin-bottom: 24px;
+        }
+        
+        .recovery-section h4, .error-patterns-section h4, .trends-section h4 {
+            margin: 0 0 16px 0;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        /* Failure Recovery Styles */
+        .recovery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        
+        .recovery-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+        
+        .recovery-service {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+        
+        .recovery-status {
+            font-size: 0.875rem;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+        
+        .recovery-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        /* Error Leaderboard Styles */
+        .error-leaderboard {
+            background: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        
+        .error-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        .error-item:last-child {
+            border-bottom: none;
+        }
+        
+        .error-rank {
+            font-weight: 700;
+            color: var(--warning-yellow);
+            min-width: 35px;
+            margin-right: 16px;
+            font-size: 0.875rem;
+        }
+        
+        .error-type {
+            flex: 1;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            text-align: left;
+        }
+        
+        .error-count {
+            color: var(--error-red);
+            font-weight: 600;
+            font-size: 0.875rem;
+            min-width: 30px;
+            text-align: right;
+        }
+        
+        /* Performance Trends Styles */
+        .trends-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        
+        .trend-card {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+        
+        .trend-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+        
+        .trend-value {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+        }
+        
+        .trend-indicator {
+            font-size: 1.5rem;
+        }
+
+        .insight-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .insight-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        #historyTable {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        #historyTable th {
+            background: var(--primary-blue-dark);
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            color: #ffffff;
+            border-bottom: 2px solid var(--primary-blue);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        #historyTable td {
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        #historyTable .no-data {
+            text-align: center;
+            color: var(--text-secondary);
+            font-style: italic;
+            padding: 40px;
+        }
+
+        .status-success {
+            color: var(--success-green);
+            font-weight: 600;
+        }
+
+        .status-failed {
+            color: var(--error-red);
+            font-weight: 600;
+        }
+
+        /* Responsive Analytics */
+        @media (max-width: 768px) {
+            .analytics-controls {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .insights-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .chart-container {
+                height: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header Section -->
+        <header class="header">
+            <h1 class="header-title">🚀 AI Service Resilience Dashboard</h1>
+            <div class="header-status">
+                <div class="status-indicator" id="connectionStatus">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span>Connecting...</span>
+                </div>
+                <div class="last-updated" id="lastUpdated">Starting up...</div>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <div class="left-panel">
+
+        <!-- Top Metrics Cards -->
+        <section class="stats-grid">
+            <div class="metric-card">
+                <div class="metric-value" id="totalRequests">0</div>
+                <div class="metric-label">Total Requests</div>
+                <div class="metric-change" id="requestsChange">+0 from last refresh</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="successRate">100%</div>
+                <div class="metric-label">Success Rate</div>
+                <div class="metric-change" id="successChange">All systems operational</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="avgLatency">0ms</div>
+                <div class="metric-label">Avg Response Time</div>
+                <div class="metric-change" id="latencyChange">Baseline performance</div>
+            </div>
+        </section>
+
+        <!-- AI Services Section -->
+        <section class="services-section">
+            <h2 class="section-title">AI Service Status</h2>
+            <div class="services-grid">
+                <!-- Google Gemini Service -->
+                <div class="service-card">
+                    <div class="service-header">
+                        <div class="service-icon">💎</div>
+                        <div class="service-name">Google Gemini</div>
+                    </div>
+                    <div class="service-status" id="gemini-status">
+                        <div class="status-dot bg-warning"></div>
+                        <span>Checking...</span>
+                    </div>
+                    <div class="service-metrics">
+                        <div class="service-metric">
+                            <div class="service-metric-value" id="gemini-requests">0</div>
+                            <div class="service-metric-label">Requests</div>
+                        </div>
+                        <div class="service-metric">
+                            <div class="service-metric-value" id="gemini-failures">0</div>
+                            <div class="service-metric-label">Failures</div>
+                        </div>
+                        <div class="service-metric">
+                            <div class="service-metric-value" id="gemini-latency">0ms</div>
+                            <div class="service-metric-label">Avg Latency</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cohere Service -->
+                <div class="service-card">
+                    <div class="service-header">
+                        <div class="service-icon">🧠</div>
+                        <div class="service-name">Cohere</div>
+                    </div>
+                    <div class="service-status" id="cohere-status">
+                        <div class="status-dot bg-warning"></div>
+                        <span>Checking...</span>
+                    </div>
+                    <div class="service-metrics">
+                        <div class="service-metric">
+                            <div class="service-metric-value" id="cohere-requests">0</div>
+                            <div class="service-metric-label">Requests</div>
+                        </div>
+                        <div class="service-metric">
+                            <div class="service-metric-value" id="cohere-failures">0</div>
+                            <div class="service-metric-label">Failures</div>
+                        </div>
+                        <div class="service-metric">
+                            <div class="service-metric-value" id="cohere-latency">0ms</div>
+                            <div class="service-metric-label">Avg Latency</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hugging Face Service -->
+                <div class="service-card">
+                    <div class="service-header">
+                        <div class="service-icon">🤗</div>
+                        <div class="service-name">Hugging Face</div>
+                    </div>
+                    <div class="service-status" id="huggingface-status">
+                        <div class="status-dot bg-warning"></div>
+                        <span>Checking...</span>
+                    </div>
+                    <div class="service-metrics">
+                        <div class="service-metric">
+                            <div class="service-metric-value" id="huggingface-requests">0</div>
+                            <div class="service-metric-label">Requests</div>
+                        </div>
+                        <div class="service-metric">
+                            <div class="service-metric-value" id="huggingface-failures">0</div>
+                            <div class="service-metric-label">Failures</div>
+                        </div>
+                        <div class="service-metric">
+                            <div class="service-metric-value" id="huggingface-latency">0ms</div>
+                            <div class="service-metric-label">Avg Latency</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chaos Engineering Section -->
+        <section class="chaos-section">
+            <div class="section-header" onclick="toggleChaosPanel()">
+                <h2 class="section-title">🔥 Chaos Engineering</h2>
+                <span id="chaosToggle" class="toggle-icon">▼</span>
+            </div>
+            
+            <div id="chaosPanel" class="chaos-panel">
+                <!-- Chaos Controls -->
+                <div class="chaos-controls">
+                    <div class="control-row">
+                        <label for="chaosService">Target Service:</label>
+                        <select id="chaosService" class="chaos-select">
+                            <option value="gemini">💎 Google Gemini</option>
+                            <option value="cohere">🧠 Cohere</option>
+                            <option value="huggingface">🤗 Hugging Face</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label for="chaosType">Chaos Type:</label>
+                        <select id="chaosType" class="chaos-select">
+                            <option value="latency">🐌 Latency Injection</option>
+                            <option value="failure">❌ Request Failure</option>
+                            <option value="timeout">⏱️ Timeout</option>
+                            <option value="intermittent">🎲 Intermittent Failures</option>
+                            <option value="unavailable">🚫 Service Unavailable</option>
+                            <option value="corruption">🔀 Response Corruption</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label for="chaosIntensity">
+                            Intensity: <span id="intensityValue">50</span><span id="intensityUnit">%</span>
+                        </label>
+                        <input type="range" id="chaosIntensity" class="chaos-slider" 
+                               min="0" max="100" value="50" 
+                               oninput="updateIntensityDisplay()">
+                        <div class="intensity-help" id="intensityHelp">
+                            Latency: milliseconds | Failure: % chance
+                        </div>
+                    </div>
+                    
+                    <div class="control-row">
+                        <label for="chaosDuration">Duration (seconds):</label>
+                        <input type="number" id="chaosDuration" class="chaos-input" 
+                               min="5" max="300" value="30">
+                    </div>
+                    
+                    <div class="control-row button-row">
+                        <button id="injectChaosBtn" class="chaos-btn inject-btn" onclick="injectChaos()">
+                            🔥 Inject Chaos
+                        </button>
+                        <button id="stopAllChaosBtn" class="chaos-btn stop-btn" onclick="stopAllChaos()">
+                            ⏹️ Stop All
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Active Experiments -->
+                <div class="active-experiments">
+                    <h3 class="experiments-title">Active Experiments:</h3>
+                    <div id="activeExperimentsList" class="experiments-list">
+                        <div class="no-experiments">No active chaos experiments</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+            </div>
+            
+            <div class="right-panel">
+        <!-- Analytics Section -->
+        <section class="analytics-section">
+            <h2 class="section-title">📊 Analytics & Insights</h2>
+            
+            <!-- Analytics Controls -->
+            <div class="analytics-controls">
+                <div class="control-group">
+                    <button id="toggleAutomation" class="control-btn automation-stopped">
+                        🔄 Start Auto Requests
+                    </button>
+                    <div class="automation-status">
+                        <span id="automationStatus">Stopped</span>
+                        <span id="automationCounter">0 requests sent</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="targetService">🎯 Target Service:</label>
+                    <select id="targetService" class="service-selector">
+                        <option value="all">🌐 All Services (Round Robin)</option>
+                        <option value="gemini">💎 Google Gemini Only</option>
+                        <option value="cohere">🧠 Cohere Only</option>
+                        <option value="huggingface">🤗 Hugging Face Only</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="requestInterval">Request Interval:</label>
+                    <select id="requestInterval">
+                        <option value="5000">5 seconds</option>
+                        <option value="10000" selected>10 seconds</option>
+                        <option value="30000">30 seconds</option>
+                        <option value="60000">1 minute</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Analytics Grid -->
+            <div class="analytics-grid">
+                <!-- Real-time Performance Chart -->
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <h3>⚡ Real-time Performance</h3>
+                        <div class="chart-controls">
+                            <button id="clearChart" class="mini-btn">Clear</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="performanceChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+
+                <!-- Service Response Time Trends -->
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <h3>📈 Service Response Time Trends</h3>
+                        <div class="chart-controls">
+                            <button id="clearLatencyChart" class="mini-btn">Clear</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="latencyChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+
+                <!-- Service Performance Leaderboard -->
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <h3>🏆 Service Performance Leaderboard</h3>
+                        <div class="chart-controls">
+                            <span class="health-legend">
+                                <span class="legend-item"><span class="legend-dot excellent"></span>1st Place</span>
+                                <span class="legend-item"><span class="legend-dot good"></span>2nd Place</span>
+                                <span class="legend-item"><span class="legend-dot poor"></span>3rd Place</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="leaderboard-container" id="serviceLeaderboard">
+                        <!-- Leaderboard will be populated dynamically -->
+                        <div class="leaderboard-item">
+                            <div class="rank-badge">🥇</div>
+                            <div class="service-info">
+                                <div class="service-name-rank">Loading...</div>
+                                <div class="service-stats-rank">Calculating rankings...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Circuit Breaker Status Panel -->
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <h3>⚡ Circuit Breaker Status</h3>
+                        <button class="btn-secondary" onclick="resetAllCircuitBreakers()" style="font-size: 0.85rem; padding: 6px 12px;">
+                            🔄 Reset All
+                        </button>
+                    </div>
+                    <div class="circuit-breaker-container" id="circuitBreakerStatus">
+                        <!-- Circuit breaker status will be populated dynamically -->
+                        <div class="circuit-breaker-item">
+                            <div class="cb-service">Loading...</div>
+                            <div class="cb-state">Initializing...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key Metrics Summary -->
+                <div class="analytics-card metrics-summary">
+                    <div class="card-header">
+                        <h3>📋 Key Insights</h3>
+                    </div>
+                    <div class="insights-grid">
+                        <div class="insight-item">
+                            <div class="insight-label">Most Reliable Service</div>
+                            <div class="insight-value" id="mostReliable">Calculating...</div>
+                        </div>
+                        <div class="insight-item">
+                            <div class="insight-label">Fastest Service</div>
+                            <div class="insight-value" id="fastestService">Calculating...</div>
+                        </div>
+                        <div class="insight-item">
+                            <div class="insight-label">Peak Performance Time</div>
+                            <div class="insight-value" id="peakTime">Calculating...</div>
+                        </div>
+                        <div class="insight-item">
+                            <div class="insight-label">Average Uptime</div>
+                            <div class="insight-value" id="avgUptime">Calculating...</div>
+                        </div>
+                        <div class="insight-item">
+                            <div class="insight-label">Request Volume Trend</div>
+                            <div class="insight-value" id="volumeTrend">Calculating...</div>
+                        </div>
+                        <div class="insight-item">
+                            <div class="insight-label">Error Rate Trend</div>
+                            <div class="insight-value" id="errorTrend">Calculating...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NEW: Advanced Analytics Section -->
+                <div class="analytics-card full-width">
+                    <div class="card-header">
+                        <h3>🔍 Advanced Analytics</h3>
+                    </div>
+                    
+                    <!-- Failure Recovery Tracking -->
+                    <div class="recovery-section">
+                        <h4>⚡ Failure Recovery Analysis</h4>
+                        <div class="recovery-grid">
+                            <div class="recovery-card">
+                                <div class="recovery-service">Gemini</div>
+                                <div class="recovery-status" id="gemini-recovery">No failures</div>
+                                <div class="recovery-time" id="gemini-recovery-time">-</div>
+                            </div>
+                            <div class="recovery-card">
+                                <div class="recovery-service">Cohere</div>
+                                <div class="recovery-status" id="cohere-recovery">No failures</div>
+                                <div class="recovery-time" id="cohere-recovery-time">-</div>
+                            </div>
+                            <div class="recovery-card">
+                                <div class="recovery-service">Hugging Face</div>
+                                <div class="recovery-status" id="huggingface-recovery">No failures</div>
+                                <div class="recovery-time" id="huggingface-recovery-time">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Error Patterns Leaderboard -->
+                    <div class="error-patterns-section">
+                        <h4>🏆 Error Patterns Leaderboard</h4>
+                        <div class="error-leaderboard" id="errorLeaderboard">
+                            <div class="error-item">
+                                <span class="error-rank">#1</span>
+                                <span class="error-type">No errors yet</span>
+                                <span class="error-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Performance Trends -->
+                    <div class="trends-section">
+                        <h4>📈 Performance Trends Analysis</h4>
+                        <div class="trends-grid">
+                            <div class="trend-card">
+                                <div class="trend-label">Latency Trend</div>
+                                <div class="trend-value" id="latencyTrend">Collecting...</div>
+                                <div class="trend-indicator" id="latencyIndicator">⏳</div>
+                            </div>
+                            <div class="trend-card">
+                                <div class="trend-label">Success Rate Trend</div>
+                                <div class="trend-value" id="successTrend">Collecting...</div>
+                                <div class="trend-indicator" id="successIndicator">⏳</div>
+                            </div>
+                            <div class="trend-card">
+                                <div class="trend-label">Overall Health</div>
+                                <div class="trend-value" id="overallTrend">Analyzing...</div>
+                                <div class="trend-indicator" id="overallIndicator">⏳</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Historical Data Table -->
+                <div class="analytics-card full-width">
+                    <div class="card-header">
+                        <h3>📊 Historical Request Log</h3>
+                        <div class="chart-controls">
+                            <button id="exportData" class="mini-btn">Export CSV</button>
+                            <button id="clearHistory" class="mini-btn">Clear History</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="historyTable">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Service</th>
+                                    <th>Status</th>
+                                    <th>Latency (ms)</th>
+                                    <th>Response Size</th>
+                                    <th>Error Type</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <tr>
+                                    <td colspan="6" class="no-data">No data collected yet. Start automation to begin analysis.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Dashboard configuration and state
+        const BACKEND_URL = '';
+        const POLLING_INTERVAL = 5000; // 5 seconds
+        let isConnected = false;
+        let retryCount = 0;
+        let pollingInterval = null;
+        let previousMetrics = {
+            totalRequests: 0,
+            successRate: 100,
+            avgLatency: 0
+        };
+
+        // Configure axios with proper timeout and error handling
+        const apiClient = axios.create({
+            baseURL: BACKEND_URL,
+            timeout: 8000,
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+
+        // Add response interceptor for global error handling
+        apiClient.interceptors.response.use(
+            response => response,
+            error => {
+                console.error('API Error:', error.message);
+                updateConnectionStatus(false);
+                return Promise.reject(error);
+            }
+        );
+
+        // Update connection status indicator
+        function updateConnectionStatus(connected) {
+            isConnected = connected;
+            const statusIndicator = document.getElementById('connectionStatus');
+            const statusDot = document.getElementById('statusDot');
+            
+            if (connected) {
+                statusIndicator.innerHTML = '<div class="status-dot status-live"></div><span>Connected</span>';
+                statusIndicator.className = 'status-indicator status-connected';
+                retryCount = 0;
+            } else {
+                statusIndicator.innerHTML = '<div class="status-dot status-error"></div><span>Backend Offline</span>';
+                statusIndicator.className = 'status-indicator status-disconnected';
+            }
+        }
+
+        // Update metrics display with smooth animations
+        function updateMetricsDisplay(data) {
+            // Validate and sanitize data
+            const totalRequests = parseInt(data.totalRequests) || 0;
+            const successRate = parseFloat(data.successRate) || 0;
+            const avgLatency = parseFloat(data.avgLatency) || 0;
+
+            // Update main metrics with change indicators
+            const totalEl = document.getElementById('totalRequests');
+            const rateEl = document.getElementById('successRate');
+            const latencyEl = document.getElementById('avgLatency');
+            const requestsChangeEl = document.getElementById('requestsChange');
+            const successChangeEl = document.getElementById('successChange');
+            const latencyChangeEl = document.getElementById('latencyChange');
+
+            if (totalEl) {
+                totalEl.textContent = totalRequests.toLocaleString();
+                const requestsDiff = totalRequests - previousMetrics.totalRequests;
+                if (requestsChangeEl && requestsDiff > 0) {
+                    requestsChangeEl.textContent = `+${requestsDiff} from last refresh`;
+                }
+            }
+
+            if (rateEl) {
+                rateEl.textContent = `${successRate.toFixed(1)}%`;
+                if (successChangeEl) {
+                    if (successRate >= 95) {
+                        successChangeEl.textContent = 'Excellent performance';
+                        successChangeEl.className = 'metric-change text-success';
+                    } else if (successRate >= 85) {
+                        successChangeEl.textContent = 'Good performance';
+                        successChangeEl.className = 'metric-change text-warning';
+                    } else {
+                        successChangeEl.textContent = 'Degraded performance';
+                        successChangeEl.className = 'metric-change text-error';
+                    }
+                }
+            }
+
+            if (latencyEl) {
+                latencyEl.textContent = `${avgLatency.toFixed(0)}ms`;
+                if (latencyChangeEl) {
+                    if (avgLatency < 200) {
+                        latencyChangeEl.textContent = 'Excellent response time';
+                        latencyChangeEl.className = 'metric-change text-success';
+                    } else if (avgLatency < 500) {
+                        latencyChangeEl.textContent = 'Good response time';
+                        latencyChangeEl.className = 'metric-change text-warning';
+                    } else {
+                        latencyChangeEl.textContent = 'Slow response time';
+                        latencyChangeEl.className = 'metric-change text-error';
+                    }
+                }
+            }
+
+            // Update AI services status
+            if (data.aiServices) {
+                updateServiceStatus('gemini', data.aiServices.gemini);
+                updateServiceStatus('cohere', data.aiServices.cohere);
+                updateServiceStatus('huggingface', data.aiServices.huggingface);
+            }
+
+            // Update analytics with new data
+            updateAnalytics(data);
+
+            // Update timestamp
+            const timestampEl = document.getElementById('lastUpdated');
+            if (timestampEl) {
+                timestampEl.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+            }
+
+            // Store current metrics for next comparison
+            previousMetrics = { totalRequests, successRate, avgLatency };
+        }
+
+        // Update individual service status
+        function updateServiceStatus(serviceName, serviceData) {
+            const statusEl = document.getElementById(`${serviceName}-status`);
+            const requestsEl = document.getElementById(`${serviceName}-requests`);
+            const latencyEl = document.getElementById(`${serviceName}-latency`);
+
+            if (statusEl && serviceData) {
+                const statusDot = statusEl.querySelector('.status-dot');
+                const statusText = statusEl.querySelector('span');
+
+                if (serviceData.status === 'healthy') {
+                    statusDot.className = 'status-dot bg-success';
+                    statusText.textContent = 'Healthy (API Key OK)';
+                    statusText.className = 'text-success';
+                } else if (serviceData.status === 'disabled') {
+                    statusDot.className = 'status-dot bg-neutral-gray';
+                    statusText.textContent = 'Disabled (Paid Service)';
+                    statusText.className = 'text-secondary';
+                } else if (serviceData.status === 'not_configured') {
+                    statusDot.className = 'status-dot bg-warning';
+                    statusText.textContent = 'No API Key';
+                    statusText.className = 'text-warning';
+                } else if (serviceData.status === 'error') {
+                    statusDot.className = 'status-dot bg-error';
+                    statusText.textContent = 'Error';
+                    statusText.className = 'text-error';
+                } else {
+                    statusDot.className = 'status-dot bg-warning';
+                    statusText.textContent = 'Unknown';
+                    statusText.className = 'text-warning';
+                }
+            }
+
+            if (requestsEl) {
+                requestsEl.textContent = (serviceData?.requests || 0).toLocaleString();
+            }
+
+            const failuresEl = document.getElementById(`${serviceName}-failures`);
+            if (failuresEl) {
+                const failures = serviceData?.failures || 0;
+                failuresEl.textContent = failures.toLocaleString();
+                
+                // Color code failures - red if > 0, gray if 0
+                if (failures > 0) {
+                    failuresEl.style.color = 'var(--error-red)';
+                } else {
+                    failuresEl.style.color = 'var(--text-secondary)';
+                }
+            }
+
+            if (latencyEl) {
+                latencyEl.textContent = `${serviceData?.avgLatency || 0}ms`;
+            }
+        }
+
+        // Show offline state when backend is unavailable
+        function showOfflineState() {
+            document.getElementById('totalRequests').textContent = 'N/A';
+            document.getElementById('successRate').textContent = 'N/A';
+            document.getElementById('avgLatency').textContent = 'N/A';
+            
+            document.getElementById('requestsChange').textContent = 'Backend offline';
+            document.getElementById('successChange').textContent = 'Backend offline';
+            document.getElementById('latencyChange').textContent = 'Backend offline';
+
+            // Update all service cards to show offline status
+            ['gemini', 'cohere', 'huggingface'].forEach(service => {
+                const statusEl = document.getElementById(`${service}-status`);
+                if (statusEl) {
+                    const statusDot = statusEl.querySelector('.status-dot');
+                    const statusText = statusEl.querySelector('span');
+                    statusDot.className = 'status-dot bg-error';
+                    statusText.textContent = 'Backend Offline';
+                    statusText.className = 'text-error';
+                }
+                
+                const requestsEl = document.getElementById(`${service}-requests`);
+                const latencyEl = document.getElementById(`${service}-latency`);
+                if (requestsEl) requestsEl.textContent = 'N/A';
+                if (latencyEl) latencyEl.textContent = 'N/A';
+            });
+        }
+
+        // Fetch metrics from backend with retry logic
+        async function fetchMetrics() {
+            try {
+                console.log(`🔄 Fetching metrics... (attempt ${retryCount + 1})`);
+                
+                const response = await apiClient.get('/metrics');
+                const data = response.data;
+                
+                // Validate response structure
+                if (!data || typeof data.totalRequests === 'undefined') {
+                    throw new Error('Invalid response format from backend');
+                }
+                
+                updateMetricsDisplay(data);
+                updateConnectionStatus(true);
+                retryCount = 0;
+                
+                console.log('✅ Metrics updated successfully:', data);
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Failed to fetch metrics:', error.message);
+                updateConnectionStatus(false);
+                
+                retryCount++;
+                if (retryCount >= 3) {
+                    console.log('❌ Max retries reached. Showing offline state.');
+                    showOfflineState();
+                }
+                
+                return false;
+            }
+        }
+
+        // Start polling for metrics
+        function startPolling() {
+            console.log('🔄 Starting real-time polling...');
+            
+            // Clear any existing interval
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
+            
+            // Initial fetch
+            fetchMetrics();
+            updateCircuitBreakerStatus();
+            
+            // Set up recurring fetch
+            pollingInterval = setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    fetchMetrics();
+                    updateCircuitBreakerStatus();
+                }
+            }, POLLING_INTERVAL);
+        }
+
+        // Stop polling
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+        }
+
+        // Initialize dashboard when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 AI Resilience Dashboard initializing...');
+            
+            try {
+                // Initialize connection status
+                updateConnectionStatus(false);
+                
+                // Set initial values to prevent undefined display
+                document.getElementById('totalRequests').textContent = '0';
+                document.getElementById('successRate').textContent = '100%';
+                document.getElementById('avgLatency').textContent = '0ms';
+                
+                // Initialize analytics system
+                initializeAnalytics();
+                
+                // Reset circuit breakers on page load to ensure fresh start
+                setTimeout(async () => {
+                    try {
+                        await axios.post('/circuit-breaker/reset', {});
+                        console.log('🔄 Circuit breakers reset on startup');
+                    } catch (err) {
+                        console.log('⚠️ Could not reset circuit breakers:', err.message);
+                    }
+                }, 500);
+                
+                // Start polling with delay to ensure backend is ready
+                setTimeout(() => {
+                    startPolling();
+                }, 1000);
+                
+                // Handle page visibility changes
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') {
+                        console.log('👁️ Tab became visible - resuming polling');
+                        if (!pollingInterval) startPolling();
+                    }
+                });
+                
+                console.log('✅ Dashboard initialization complete');
+                
+            } catch (error) {
+                console.error('❌ Dashboard initialization error:', error);
+                showOfflineState();
+            }
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            stopPolling();
+        });
+
+        // Handle errors globally
+        window.addEventListener('error', (event) => {
+            console.error('Global error:', event.error);
+        });
+
+        // Handle unhandled promise rejections
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+        });
+
+        // ============================================================================
+        // ANALYTICS AND AUTOMATION SYSTEM
+        // ============================================================================
+
+        // Version check - clear old data if version changed
+        const DASHBOARD_VERSION = '2.0.3'; // Fixed timestamp Date conversion from localStorage
+        const storedVersion = localStorage.getItem('dashboardVersion');
+        if (storedVersion !== DASHBOARD_VERSION) {
+            console.log('🔄 Dashboard version changed, clearing old data...');
+            localStorage.removeItem('aiResilienceAnalytics');
+            localStorage.setItem('dashboardVersion', DASHBOARD_VERSION);
+        }
+
+        // Analytics data storage
+        let analyticsData = {
+            requests: [],
+            performanceHistory: [],
+            serviceStats: {
+                gemini: { requests: 0, failures: 0, totalLatency: 0, recentLatencies: [], uptimeStart: Date.now(), lastFailure: null, lastFailureReason: null, recoveryTime: null },
+                cohere: { requests: 0, failures: 0, totalLatency: 0, recentLatencies: [], uptimeStart: Date.now(), lastFailure: null, lastFailureReason: null, recoveryTime: null },
+                huggingface: { requests: 0, failures: 0, totalLatency: 0, recentLatencies: [], uptimeStart: Date.now(), lastFailure: null, lastFailureReason: null, recoveryTime: null }
+            },
+            errorPatterns: {},
+            performanceTrends: {
+                latencyTrend: [],
+                successRateTrend: [],
+                trendAnalysis: 'stable'
+            }
+        };
+
+        // Automation state
+        let automationState = {
+            running: false,
+            interval: null,
+            requestCount: 0,
+            intervalMs: 10000 // 10 seconds default
+        };
+
+        // Chart instances
+        let charts = {
+            performance: null,
+            latency: null,
+            usage: null
+        };
+
+        // Sample prompts for automated requests
+        const automationPrompts = [
+            "Explain quantum computing briefly",
+            "What is machine learning?",
+            "Describe artificial intelligence",
+            "How does blockchain work?",
+            "What are neural networks?",
+            "Explain cloud computing",
+            "What is data science?",
+            "Describe IoT technology",
+            "What is cybersecurity?",
+            "How does 5G work?"
+        ];
+
+        // Available services for automation
+        const availableServices = ['gemini', 'cohere', 'huggingface'];
+
+        // Initialize analytics system
+        function initializeAnalytics() {
+            console.log('🔧 Initializing analytics system...');
+            
+            // Initialize charts
+            initializeCharts();
+            
+            // Set up automation controls
+            setupAutomationControls();
+            
+            // Load historical data from database
+            loadHistoricalData();
+            
+            // Load any stored local data as fallback
+            loadStoredAnalytics();
+            
+            console.log('✅ Analytics system initialized');
+        }
+        
+        // Load historical data from database
+        async function loadHistoricalData() {
+            try {
+                console.log('📚 Loading historical data from database...');
+                
+                // Load recent requests (last 100)
+                const historyResponse = await axios.get('/api/history/requests?limit=100');
+                if (historyResponse.data.success && historyResponse.data.requests.length > 0) {
+                    console.log(`📥 Loaded ${historyResponse.data.requests.length} historical requests`);
+                    
+                    // Process historical requests (newest first, so reverse)
+                    const requests = historyResponse.data.requests.reverse();
+                    requests.forEach(req => {
+                        const requestLog = {
+                            timestamp: new Date(req.timestamp),
+                            service: req.service,
+                            success: req.success === 1 || req.success === true,
+                            latency: req.latency,
+                            responseSize: req.response_size || 0,
+                            errorType: req.error_type,
+                            isAutomated: req.automated === 1 || req.automated === true
+                        };
+                        
+                        // Add to history table
+                        updateHistoryTable(requestLog);
+                        
+                        // Update service stats
+                        if (analyticsData.serviceStats[req.service]) {
+                            analyticsData.serviceStats[req.service].requests++;
+                            if (!requestLog.success) {
+                                analyticsData.serviceStats[req.service].failures++;
+                            } else {
+                                analyticsData.serviceStats[req.service].totalLatency += req.latency;
+                            }
+                        }
+                    });
+                    
+                    // Update charts with historical data
+                    updateCharts();
+                }
+                
+                // Load database statistics
+                const statsResponse = await axios.get('/api/database/stats');
+                if (statsResponse.data.success) {
+                    console.log('📊 Database stats:', statsResponse.data.statistics);
+                }
+                
+            } catch (error) {
+                console.error('Failed to load historical data:', error);
+                // Continue with empty data
+            }
+        }
+
+        // Initialize all charts
+        function initializeCharts() {
+            const chartConfig = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { font: { size: 11 } }
+                    }
+                },
+                scales: {
+                    x: { 
+                        display: true,
+                        grid: { color: '#e5e7eb' },
+                        ticks: { font: { size: 10 } }
+                    },
+                    y: { 
+                        display: true,
+                        grid: { color: '#e5e7eb' },
+                        ticks: { font: { size: 10 } }
+                    }
+                }
+            };
+
+            // Performance Chart (Real-time response times)
+            const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+            charts.performance = new Chart(performanceCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Avg Response Time (ms)',
+                        data: [],
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    ...chartConfig,
+                    scales: {
+                        ...chartConfig.scales,
+                        y: { 
+                            ...chartConfig.scales.y,
+                            beginAtZero: true,
+                            title: { display: true, text: 'Response Time (ms)' }
+                        }
+                    }
+                }
+            });
+
+            // Service Response Time Trends
+            const latencyCtx = document.getElementById('latencyChart').getContext('2d');
+            charts.latency = new Chart(latencyCtx, {
+                type: 'line',
+                data: {
+                    labels: [], // Time labels
+                    datasets: [
+                        {
+                            label: 'Gemini',
+                            data: [],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            spanGaps: true
+                        },
+                        {
+                            label: 'Cohere', 
+                            data: [],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            spanGaps: true
+                        },
+                        {
+                            label: 'Hugging Face',
+                            data: [],
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            spanGaps: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { 
+                                font: { size: 10 },
+                                color: '#f1f5f9',
+                                usePointStyle: true,
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#f1f5f9',
+                            bodyColor: '#f1f5f9',
+                            borderColor: '#3b82f6',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y}ms`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: { 
+                                display: true, 
+                                text: 'Time',
+                                color: '#94a3b8',
+                                font: { size: 10 }
+                            },
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                            ticks: { 
+                                color: '#94a3b8',
+                                font: { size: 9 },
+                                maxTicksLimit: 8
+                            }
+                        },
+                        y: {
+                            display: true,
+                            beginAtZero: true,
+                            title: { 
+                                display: true, 
+                                text: 'Response Time (ms)',
+                                color: '#94a3b8',
+                                font: { size: 10 }
+                            },
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                            ticks: { 
+                                color: '#94a3b8',
+                                font: { size: 9 }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Service Health Dashboard - No chart initialization needed
+            // Health scores will be updated via updateHealthDashboard() function
+        }
+
+        // Setup automation controls
+        function setupAutomationControls() {
+            const toggleBtn = document.getElementById('toggleAutomation');
+            const intervalSelect = document.getElementById('requestInterval');
+            const clearChartBtn = document.getElementById('clearChart');
+            const clearLatencyChartBtn = document.getElementById('clearLatencyChart');
+            const exportBtn = document.getElementById('exportData');
+            const clearHistoryBtn = document.getElementById('clearHistory');
+
+            toggleBtn.addEventListener('click', toggleAutomation);
+            intervalSelect.addEventListener('change', (e) => {
+                automationState.intervalMs = parseInt(e.target.value);
+                if (automationState.running) {
+                    stopAutomation();
+                    startAutomation();
+                }
+            });
+
+            clearChartBtn.addEventListener('click', clearCharts);
+            clearLatencyChartBtn.addEventListener('click', () => clearLatencyChart());
+            exportBtn.addEventListener('click', exportAnalyticsData);
+            clearHistoryBtn.addEventListener('click', clearAnalyticsHistory);
+        }
+
+        // Toggle automation on/off
+        function toggleAutomation() {
+            if (automationState.running) {
+                stopAutomation();
+            } else {
+                startAutomation();
+            }
+        }
+
+        // Start automated requests
+        function startAutomation() {
+            console.log('🚀 Starting automated requests...');
+            automationState.running = true;
+            
+            const toggleBtn = document.getElementById('toggleAutomation');
+            const statusEl = document.getElementById('automationStatus');
+            
+            toggleBtn.textContent = '⏹️ Stop Auto Requests';
+            toggleBtn.className = 'control-btn automation-running';
+            statusEl.textContent = 'Running';
+            
+            // Start making requests
+            automationState.interval = setInterval(makeAutomatedRequest, automationState.intervalMs);
+            
+            // Make first request immediately
+            makeAutomatedRequest();
+        }
+
+        // Stop automated requests
+        function stopAutomation() {
+            console.log('⏹️ Stopping automated requests...');
+            automationState.running = false;
+            
+            if (automationState.interval) {
+                clearInterval(automationState.interval);
+                automationState.interval = null;
+            }
+            
+            const toggleBtn = document.getElementById('toggleAutomation');
+            const statusEl = document.getElementById('automationStatus');
+            
+            toggleBtn.textContent = '🔄 Start Auto Requests';
+            toggleBtn.className = 'control-btn automation-stopped';
+            statusEl.textContent = 'Stopped';
+        }
+
+        // Make an automated request
+        async function makeAutomatedRequest() {
+            try {
+                // Get selected target service
+                const targetServiceSelect = document.getElementById('targetService');
+                const targetService = targetServiceSelect?.value || 'all';
+                
+                // Determine which service to use
+                let service;
+                if (targetService === 'all') {
+                    // Round robin through all services
+                    service = availableServices[Math.floor(Math.random() * availableServices.length)];
+                } else {
+                    // Use the selected service
+                    service = targetService;
+                }
+                
+                const prompt = automationPrompts[Math.floor(Math.random() * automationPrompts.length)];
+                
+                console.log(`🤖 Auto request: ${service} - "${prompt}"`);
+                
+                const requestData = {
+                    prompt: `${prompt} (Auto-request #${automationState.requestCount + 1})`,
+                    service: service
+                };
+
+                const response = await apiClient.post('/ai', requestData);
+                
+                // Check if the request was actually successful
+                const success = response.data.success !== false;
+                const latency = response.data.latency || 0;
+                const responseSize = success ? (response.data.response?.length || 0) : 0;
+                const errorType = success ? null : (response.data.error || 'Unknown error');
+                
+                // Log request with actual data from response
+                logAutomatedRequest(service, success, latency, responseSize, errorType);
+                
+                automationState.requestCount++;
+                updateAutomationCounter();
+                
+            } catch (error) {
+                // Log failed request (network error or exception)
+                const targetServiceSelect = document.getElementById('targetService');
+                const targetService = targetServiceSelect?.value || 'all';
+                const service = targetService === 'all' ? availableServices[0] : targetService;
+                
+                // Try to extract error details
+                const errorMessage = error.response?.data?.error || error.message || 'Request failed';
+                const latency = error.response?.data?.latency || 0;
+                
+                logAutomatedRequest(service, false, latency, 0, errorMessage);
+                
+                console.error('❌ Automated request failed:', error.message);
+            }
+        }
+
+        // Log automated request for analytics
+        function logAutomatedRequest(service, success, latency, responseSize, errorType = null) {
+            const requestLog = {
+                timestamp: new Date(),
+                service: service,
+                success: success,
+                latency: latency,
+                responseSize: responseSize,
+                errorType: errorType,
+                isAutomated: true
+            };
+
+            // Add to analytics data
+            analyticsData.requests.push(requestLog);
+            
+            // Log to database for persistent storage
+            logRequestToDatabase(service, success, latency, responseSize, errorType, true);
+            
+            // Update service stats and failure recovery
+            if (analyticsData.serviceStats[service]) {
+                analyticsData.serviceStats[service].requests++;
+                if (!success) {
+                    analyticsData.serviceStats[service].failures++;
+                    analyticsData.serviceStats[service].lastFailure = new Date();
+                    analyticsData.serviceStats[service].lastFailureReason = errorType || 'Unknown Error';
+                    analyticsData.serviceStats[service].recoveryTime = null;
+                    
+                    // Track error patterns
+                    trackErrorPattern(errorType || 'Unknown Error');
+                } else {
+                    analyticsData.serviceStats[service].totalLatency += latency;
+                    
+                    // Initialize recentLatencies array if it doesn't exist
+                    if (!analyticsData.serviceStats[service].recentLatencies) {
+                        analyticsData.serviceStats[service].recentLatencies = [];
+                    }
+                    
+                    // Track recent latencies with timestamps for line chart (keep last 15)
+                    analyticsData.serviceStats[service].recentLatencies.push({
+                        latency: latency,
+                        timestamp: new Date()
+                    });
+                    if (analyticsData.serviceStats[service].recentLatencies.length > 15) {
+                        analyticsData.serviceStats[service].recentLatencies.shift();
+                    }
+                    
+                    // Check for recovery from previous failure
+                    if (analyticsData.serviceStats[service].lastFailure && !analyticsData.serviceStats[service].recoveryTime) {
+                        const recoveryTime = (new Date() - analyticsData.serviceStats[service].lastFailure) / 1000;
+                        analyticsData.serviceStats[service].recoveryTime = recoveryTime;
+                    }
+                }
+            }
+
+            // Add to performance history
+            analyticsData.performanceHistory.push({
+                timestamp: requestLog.timestamp,
+                avgLatency: latency
+            });
+
+            // Keep only last 50 requests in performance history
+            if (analyticsData.performanceHistory.length > 50) {
+                analyticsData.performanceHistory.shift();
+            }
+            
+            // Update performance trends
+            updatePerformanceTrends(success, latency);
+
+            // Update history table
+            updateHistoryTable(requestLog);
+            
+            // Store analytics data
+            storeAnalyticsData();
+        }
+        
+        // Log request to database for persistent storage
+        async function logRequestToDatabase(service, success, latency, responseSize = 0, errorType = null, automated = false) {
+            try {
+                await axios.post('/api/log-request', {
+                    service,
+                    success,
+                    latency,
+                    responseSize,
+                    errorType,
+                    automated,
+                    chaosActive: false,
+                    circuitBreakerState: null
+                });
+            } catch (error) {
+                console.error('Failed to log request to database:', error);
+            }
+        }
+        
+        // Track error patterns for leaderboard
+        function trackErrorPattern(errorType) {
+            if (!errorType || errorType === 'null') errorType = 'Unknown Error';
+            
+            if (!analyticsData.errorPatterns[errorType]) {
+                analyticsData.errorPatterns[errorType] = 0;
+            }
+            analyticsData.errorPatterns[errorType]++;
+        }
+        
+        // Update performance trends analysis
+        function updatePerformanceTrends(success, latency) {
+            const now = Date.now();
+            
+            // Add current data point
+            analyticsData.performanceTrends.latencyTrend.push({ time: now, value: latency });
+            analyticsData.performanceTrends.successRateTrend.push({ time: now, success: success });
+            
+            // Keep only last 20 data points for trend analysis
+            if (analyticsData.performanceTrends.latencyTrend.length > 20) {
+                analyticsData.performanceTrends.latencyTrend.shift();
+            }
+            if (analyticsData.performanceTrends.successRateTrend.length > 20) {
+                analyticsData.performanceTrends.successRateTrend.shift();
+            }
+            
+            // Analyze trends
+            analyzePerformanceTrends();
+        }
+        
+        // Analyze performance trends
+        function analyzePerformanceTrends() {
+            const latencyData = analyticsData.performanceTrends.latencyTrend;
+            const successData = analyticsData.performanceTrends.successRateTrend;
+            
+            if (latencyData.length < 5) {
+                analyticsData.performanceTrends.trendAnalysis = 'insufficient_data';
+                return;
+            }
+            
+            // Analyze latency trend
+            const recentLatency = latencyData.slice(-5).map(d => d.value);
+            const earlierLatency = latencyData.slice(-10, -5).map(d => d.value);
+            
+            const recentAvg = recentLatency.reduce((a, b) => a + b, 0) / recentLatency.length;
+            const earlierAvg = earlierLatency.length > 0 ? 
+                earlierLatency.reduce((a, b) => a + b, 0) / earlierLatency.length : recentAvg;
+            
+            const latencyTrend = recentAvg > earlierAvg * 1.2 ? 'degrading' : 
+                                recentAvg < earlierAvg * 0.8 ? 'improving' : 'stable';
+            
+            // Analyze success rate trend
+            const recentSuccess = successData.slice(-5).filter(d => d.success).length / 5;
+            const earlierSuccess = successData.slice(-10, -5).filter(d => d.success).length / 5;
+            
+            const successTrend = recentSuccess < earlierSuccess * 0.8 ? 'degrading' :
+                                recentSuccess > earlierSuccess * 1.2 ? 'improving' : 'stable';
+            
+            // Overall assessment
+            if (latencyTrend === 'degrading' || successTrend === 'degrading') {
+                analyticsData.performanceTrends.trendAnalysis = 'degrading';
+            } else if (latencyTrend === 'improving' && successTrend === 'improving') {
+                analyticsData.performanceTrends.trendAnalysis = 'improving';
+            } else {
+                analyticsData.performanceTrends.trendAnalysis = 'stable';
+            }
+        }
+
+        // Update analytics displays
+        function updateAnalytics(metricsData) {
+            updateCharts();
+            updateInsights(metricsData);
+        }
+
+        // Update all charts with current data
+        function updateCharts() {
+            // Update performance chart
+            if (charts.performance && analyticsData.performanceHistory.length > 0) {
+                const labels = analyticsData.performanceHistory.map(d => 
+                    d.timestamp.toLocaleTimeString()
+                );
+                const data = analyticsData.performanceHistory.map(d => d.avgLatency);
+                
+                charts.performance.data.labels = labels;
+                charts.performance.data.datasets[0].data = data;
+                charts.performance.update('none');
+            }
+
+            // Update response time trends
+            if (charts.latency) {
+                const services = ['gemini', 'cohere', 'huggingface'];
+                
+                // Collect all timestamps from all services
+                const allTimestamps = new Set();
+                services.forEach(service => {
+                    const recentLatencies = analyticsData.serviceStats[service].recentLatencies || [];
+                    recentLatencies.forEach(entry => {
+                        if (entry && entry.timestamp) {
+                            // Convert timestamp to Date if it's a string
+                            const timestamp = entry.timestamp instanceof Date ? entry.timestamp : new Date(entry.timestamp);
+                            allTimestamps.add(timestamp.getTime());
+                        }
+                    });
+                });
+                
+                // Sort timestamps and take last 15
+                const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b).slice(-15);
+                
+                // Create labels from timestamps (show time only)
+                const labels = sortedTimestamps.map(ts => {
+                    const date = new Date(ts);
+                    return date.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit', 
+                        second: '2-digit',
+                        hour12: false 
+                    });
+                });
+                
+                charts.latency.data.labels = labels;
+                
+                // Update each service's dataset
+                services.forEach((service, index) => {
+                    const recentLatencies = analyticsData.serviceStats[service].recentLatencies || [];
+                    
+                    // Map latencies to timestamps
+                    const dataPoints = sortedTimestamps.map(ts => {
+                        const entry = recentLatencies.find(e => {
+                            if (e && e.timestamp) {
+                                // Convert timestamp to Date if it's a string
+                                const timestamp = e.timestamp instanceof Date ? e.timestamp : new Date(e.timestamp);
+                                return timestamp.getTime() === ts;
+                            }
+                            return false;
+                        });
+                        return entry ? entry.latency : null;
+                    });
+                    
+                    charts.latency.data.datasets[index].data = dataPoints;
+                });
+                
+                charts.latency.update('none');
+            }
+
+            // Update health dashboard
+            updateHealthDashboard();
+        }
+
+        // Update service performance leaderboard
+        function updateHealthDashboard() {
+            const services = [
+                { name: 'gemini', displayName: 'Google Gemini', icon: '💎' },
+                { name: 'cohere', displayName: 'Cohere', icon: '🧠' },
+                { name: 'huggingface', displayName: 'Hugging Face', icon: '🤗' }
+            ];
+            
+            // Calculate performance metrics for each service
+            const servicePerformance = services.map(service => {
+                const stats = analyticsData.serviceStats[service.name];
+                
+                const successRate = stats.requests > 0 ? 
+                    ((stats.requests - stats.failures) / stats.requests) * 100 : 100;
+                    
+                const avgSpeed = stats.requests > 0 && (stats.requests - stats.failures) > 0 ? 
+                    stats.totalLatency / (stats.requests - stats.failures) : 0;
+                
+                return {
+                    ...service,
+                    requests: stats.requests,
+                    failures: stats.failures,
+                    successRate: successRate,
+                    avgSpeed: avgSpeed,
+                    score: (successRate * 0.6) + (avgSpeed > 0 ? Math.max(0, 100 - avgSpeed / 30) : 0) * 0.4
+                };
+            });
+            
+            // Sort by score (highest first)
+            servicePerformance.sort((a, b) => b.score - a.score);
+            
+            // Update leaderboard UI
+            const leaderboardContainer = document.getElementById('serviceLeaderboard');
+            if (!leaderboardContainer) return;
+            
+            const medals = ['🥇', '🥈', '🥉'];
+            const rankClasses = ['rank-1', 'rank-2', 'rank-3'];
+            
+            leaderboardContainer.innerHTML = servicePerformance.map((service, index) => {
+                const performanceLabel = service.successRate >= 95 && service.avgSpeed < 2000 ? 'excellent' :
+                                        service.successRate >= 80 && service.avgSpeed < 3000 ? 'good' : 'poor';
+                const performanceText = performanceLabel.charAt(0).toUpperCase() + performanceLabel.slice(1);
+                
+                return `
+                    <div class="leaderboard-item ${rankClasses[index]}">
+                        <div class="rank-badge">${medals[index]}</div>
+                        <div class="service-info">
+                            <div class="service-name-rank">
+                                <span class="service-icon-rank">${service.icon}</span>
+                                ${service.displayName}
+                            </div>
+                            <div class="service-stats-rank">
+                                <div class="stat-item-rank">
+                                    <span class="stat-label-rank">Requests</span>
+                                    <span class="stat-value-rank">${service.requests}</span>
+                                </div>
+                                <div class="stat-item-rank">
+                                    <span class="stat-label-rank">Success Rate</span>
+                                    <span class="stat-value-rank ${service.successRate >= 90 ? 'success' : service.successRate >= 70 ? 'warning' : 'error'}">
+                                        ${service.successRate.toFixed(1)}%
+                                    </span>
+                                </div>
+                                <div class="stat-item-rank">
+                                    <span class="stat-label-rank">Avg Speed</span>
+                                    <span class="stat-value-rank ${service.avgSpeed < 2000 ? 'success' : service.avgSpeed < 3000 ? 'warning' : 'error'}">
+                                        ${Math.round(service.avgSpeed)}ms
+                                    </span>
+                                </div>
+                                <div class="stat-item-rank">
+                                    <span class="stat-label-rank">Failures</span>
+                                    <span class="stat-value-rank ${service.failures === 0 ? 'success' : 'error'}">
+                                        ${service.failures}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="performance-badge ${performanceLabel}">${performanceText}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update key insights
+        function updateInsights(metricsData) {
+            // Prefer live backend metrics when available, otherwise fall back to local analyticsData
+            const hasBackendMetrics = metricsData && metricsData.aiServices;
+
+            // Most reliable service (prefer backend successRate)
+            if (hasBackendMetrics) {
+                let best = null;
+                let bestRate = -1;
+                for (const s in metricsData.aiServices) {
+                    const svc = metricsData.aiServices[s];
+                    const sr = parseFloat(svc.successRate);
+                    if (!isNaN(sr) && sr > bestRate) {
+                        bestRate = sr;
+                        best = s;
+                    }
+                }
+                document.getElementById('mostReliable').textContent = best ? (best.charAt(0).toUpperCase() + best.slice(1)) : 'See Health Dashboard';
+            } else {
+                document.getElementById('mostReliable').textContent = 'See Health Dashboard';
+            }
+
+            // Fastest service
+            let fastestService = 'N/A';
+            let lowestLatency = Infinity;
+
+            if (hasBackendMetrics) {
+                for (const service in metricsData.aiServices) {
+                    const svc = metricsData.aiServices[service];
+                    const avgLatency = parseFloat(svc.avgLatency);
+                    const successRate = parseFloat(svc.successRate) || 0;
+                    if (!isNaN(avgLatency) && successRate > 0) {
+                        if (avgLatency < lowestLatency) {
+                            lowestLatency = avgLatency;
+                            fastestService = service.charAt(0).toUpperCase() + service.slice(1);
+                        }
+                    }
+                }
+            } else {
+                // Fallback to analytics data
+                const services = Object.keys(analyticsData.serviceStats);
+                services.forEach(service => {
+                    const stats = analyticsData.serviceStats[service];
+                    const successfulRequests = stats.requests - stats.failures;
+                    if (successfulRequests > 0) {
+                        const avgLatency = stats.totalLatency / successfulRequests;
+                        if (avgLatency < lowestLatency) {
+                            lowestLatency = avgLatency;
+                            fastestService = service.charAt(0).toUpperCase() + service.slice(1);
+                        }
+                    }
+                });
+            }
+
+            document.getElementById('fastestService').textContent = 
+                fastestService !== 'N/A' ? `${fastestService} (${lowestLatency.toFixed(0)}ms)` : fastestService;
+
+            // Peak performance time (use local performance history if available)
+            if (analyticsData.performanceHistory.length > 0) {
+                const bestPerformance = analyticsData.performanceHistory.reduce((best, current) => 
+                    (current.avgLatency < best.avgLatency ? current : best)
+                );
+                // defensive: ensure timestamp is a Date
+                const ts = bestPerformance.timestamp instanceof Date ? bestPerformance.timestamp : new Date(bestPerformance.timestamp);
+                document.getElementById('peakTime').textContent = ts.toLocaleTimeString();
+            } else {
+                document.getElementById('peakTime').textContent = 'Calculating...';
+            }
+
+            // Average uptime: prefer backend uptime if provided, otherwise compute from uptimeStart
+            let uptimeHours = 'N/A';
+            if (hasBackendMetrics && typeof metricsData.uptime !== 'undefined') {
+                // metricsData.uptime may be seconds or milliseconds; infer units
+                let uptimeMs = null;
+                const u = Number(metricsData.uptime);
+                if (!isNaN(u)) {
+                    if (u > 1e6) uptimeMs = u; // assume milliseconds
+                    else uptimeMs = u * 1000; // assume seconds
+                }
+                if (uptimeMs !== null) {
+                    uptimeHours = (uptimeMs / (1000 * 60 * 60)).toFixed(1);
+                    document.getElementById('avgUptime').textContent = `${uptimeHours}h`;
+                }
+            }
+
+            if (uptimeHours === 'N/A') {
+                // fallback: compute from analyticsData.uptimeStart values
+                const now = Date.now();
+                const services = Object.keys(analyticsData.serviceStats);
+                if (services.length > 0) {
+                    const avgUptime = services.reduce((sum, service) => {
+                        return sum + (now - analyticsData.serviceStats[service].uptimeStart);
+                    }, 0) / services.length;
+                    const computedHours = (avgUptime / (1000 * 60 * 60)).toFixed(1);
+                    document.getElementById('avgUptime').textContent = `${computedHours}h`;
+                } else {
+                    document.getElementById('avgUptime').textContent = 'N/A';
+                }
+            }
+
+            // Request volume and error trends
+            if (analyticsData.requests.length > 0) {
+                const recentRequests = analyticsData.requests.filter(r => 
+                    (Date.now() - new Date(r.timestamp).getTime()) < 300000 // Last 5 minutes
+                ).length;
+                const requestRate = (recentRequests / 5).toFixed(1); // Requests per minute
+                document.getElementById('volumeTrend').textContent = `${requestRate}/min`;
+
+                const recentErrors = analyticsData.requests.filter(r => 
+                    (!r.success) && ((Date.now() - new Date(r.timestamp).getTime()) < 300000)
+                ).length;
+                const errorRate = recentRequests > 0 ? ((recentErrors / recentRequests) * 100).toFixed(1) : 0;
+                document.getElementById('errorTrend').textContent = `${errorRate}%`;
+            } else if (hasBackendMetrics) {
+                // Use backend totals as a simple snapshot when no local analytics exist
+                const total = Number(metricsData.totalRequests) || 0;
+                const failed = Number(metricsData.failedRequests) || 0;
+                document.getElementById('volumeTrend').textContent = `${total} total`;
+                const errPct = total > 0 ? ((failed / total) * 100).toFixed(1) : 0;
+                document.getElementById('errorTrend').textContent = `${errPct}%`;
+            } else {
+                document.getElementById('volumeTrend').textContent = '0.0/min';
+                document.getElementById('errorTrend').textContent = '0%';
+            }
+
+            // Update advanced analytics
+            updateFailureRecovery();
+            updateErrorLeaderboard();
+            updatePerformanceTrendsDisplay();
+        }
+
+        // Circuit Breaker Functions
+        async function updateCircuitBreakerStatus() {
+            try {
+                const response = await axios.get('/circuit-breaker/status');
+                const cbData = response.data;
+                
+                const container = document.getElementById('circuitBreakerStatus');
+                if (!container) return;
+
+                const serviceNames = {
+                    gemini: { name: 'Gemini', icon: '🟢' },
+                    cohere: { name: 'Cohere', icon: '🔵' },
+                    huggingface: { name: 'Hugging Face', icon: '🟡' }
+                };
+
+                const stateIcons = {
+                    'CLOSED': '✅',
+                    'OPEN': '⛔',
+                    'HALF_OPEN': '⚠️'
+                };
+
+                container.innerHTML = Object.keys(cbData).map(service => {
+                    const cb = cbData[service];
+                    const svcInfo = serviceNames[service] || { name: service, icon: '⚪' };
+                    const stateClass = cb.state.toLowerCase().replace('_', '-');
+                    
+                    const timeInStateMs = cb.timeInCurrentState || 0;
+                    const timeInStateSec = Math.round(timeInStateMs / 1000);
+                    
+                    return `
+                        <div class="circuit-breaker-item state-${stateClass}">
+                            <div class="cb-left">
+                                <div class="cb-service">
+                                    <span class="cb-service-icon">${svcInfo.icon}</span>
+                                    ${svcInfo.name}
+                                </div>
+                                <div class="cb-state ${cb.state}">
+                                    ${stateIcons[cb.state] || '●'} ${cb.state.replace('_', '-')}
+                                </div>
+                                <div class="cb-metrics">
+                                    <div class="cb-metric">
+                                        <span class="cb-metric-label">Failures</span>
+                                        <span class="cb-metric-value">${cb.failureCount}/${cb.failureThreshold}</span>
+                                    </div>
+                                    <div class="cb-metric">
+                                        <span class="cb-metric-label">Success Rate</span>
+                                        <span class="cb-metric-value">${cb.metrics.successRate}%</span>
+                                    </div>
+                                    <div class="cb-metric">
+                                        <span class="cb-metric-label">Time in State</span>
+                                        <span class="cb-metric-value">${timeInStateSec}s</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="cb-actions">
+                                <button class="cb-reset-btn" onclick="resetCircuitBreaker('${service}')">
+                                    🔄 Reset
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('Error fetching circuit breaker status:', error);
+                const container = document.getElementById('circuitBreakerStatus');
+                if (container) {
+                    container.innerHTML = `
+                        <div class="circuit-breaker-item">
+                            <div class="cb-service">❌ Unable to fetch circuit breaker status</div>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        async function resetCircuitBreaker(service) {
+            try {
+                const response = await axios.post('/circuit-breaker/reset', { service });
+                console.log(`✅ Circuit breaker for ${service} reset:`, response.data);
+                
+                // Immediately update the display
+                await updateCircuitBreakerStatus();
+                
+                // Show success notification
+                showNotification(`Circuit breaker for ${service} has been reset`, 'success');
+            } catch (error) {
+                console.error(`Error resetting circuit breaker for ${service}:`, error);
+                showNotification(`Failed to reset circuit breaker for ${service}`, 'error');
+            }
+        }
+
+        async function resetAllCircuitBreakers() {
+            try {
+                const response = await axios.post('/circuit-breaker/reset', {});
+                console.log('✅ All circuit breakers reset:', response.data);
+                
+                // Immediately update the display
+                await updateCircuitBreakerStatus();
+                
+                // Show success notification
+                showNotification('All circuit breakers have been reset', 'success');
+            } catch (error) {
+                console.error('Error resetting all circuit breakers:', error);
+                showNotification('Failed to reset circuit breakers', 'error');
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            // Simple notification (you can enhance this with a proper toast library)
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 16px 24px;
+                background: ${type === 'success' ? 'var(--success-green)' : type === 'error' ? 'var(--error-red)' : 'var(--primary-blue)'};
+                color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                font-weight: 600;
+                animation: slideIn 0.3s ease-out;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
+        // Update failure recovery display
+        function updateFailureRecovery() {
+            const services = Object.keys(analyticsData.serviceStats);
+            const serviceNames = {
+                gemini: 'Gemini',
+                cohere: 'Cohere',
+                huggingface: 'Hugging Face'
+            };
+            
+            services.forEach(service => {
+                const stats = analyticsData.serviceStats[service];
+                const recoveryEl = document.getElementById(`${service}-recovery`);
+                const timeEl = document.getElementById(`${service}-recovery-time`);
+                
+                if (recoveryEl && timeEl) {
+                    if (stats.failures === 0) {
+                        recoveryEl.innerHTML = `<strong>No failures</strong>`;
+                        recoveryEl.style.color = 'var(--success-green)';
+                        timeEl.textContent = '-';
+                    } else if (stats.recoveryTime !== null && stats.lastFailure) {
+                        // Service recovered
+                        const failureDate = new Date(stats.lastFailure);
+                        const failureTime = failureDate.toLocaleTimeString();
+                        const failureReason = stats.lastFailureReason || 'Unknown';
+                        
+                        recoveryEl.innerHTML = `<strong>Recovered</strong><br><small style="color: var(--text-secondary);">Reason: ${failureReason}</small>`;
+                        recoveryEl.style.color = 'var(--warning-yellow)';
+                        timeEl.innerHTML = `Last failed at ${failureTime}<br>Recovered in ${stats.recoveryTime.toFixed(1)}s`;
+                    } else if (stats.lastFailure) {
+                        // Service currently failing
+                        const failureDate = new Date(stats.lastFailure);
+                        const failureTime = failureDate.toLocaleTimeString();
+                        const timeSinceFailure = (Date.now() - stats.lastFailure) / 1000;
+                        const failureReason = stats.lastFailureReason || 'Unknown';
+                        
+                        recoveryEl.innerHTML = `<strong>Failed</strong><br><small style="color: var(--text-secondary);">Reason: ${failureReason}</small>`;
+                        recoveryEl.style.color = 'var(--error-red)';
+                        timeEl.innerHTML = `Failed at ${failureTime}<br>${timeSinceFailure.toFixed(0)}s ago`;
+                    }
+                }
+            });
+        }
+        
+        // Update error patterns leaderboard
+        function updateErrorLeaderboard() {
+            const leaderboardEl = document.getElementById('errorLeaderboard');
+            if (!leaderboardEl) return;
+            
+            // Sort errors by count
+            const sortedErrors = Object.entries(analyticsData.errorPatterns)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 5); // Top 5 errors
+            
+            if (sortedErrors.length === 0) {
+                leaderboardEl.innerHTML = `
+                    <div class="error-item">
+                        <span class="error-rank">#1</span>
+                        <span class="error-type">No errors yet</span>
+                        <span class="error-count">0</span>
+                    </div>
+                `;
+                return;
+            }
+            
+            leaderboardEl.innerHTML = sortedErrors.map(([errorType, count], index) => `
+                <div class="error-item">
+                    <span class="error-rank">#${index + 1}</span>
+                    <span class="error-type">${errorType}</span>
+                    <span class="error-count">${count}</span>
+                </div>
+            `).join('');
+        }
+        
+        // Update performance trends display
+        function updatePerformanceTrendsDisplay() {
+            const trends = analyticsData.performanceTrends;
+            
+            // Latency trend
+            const latencyTrendEl = document.getElementById('latencyTrend');
+            const latencyIndicatorEl = document.getElementById('latencyIndicator');
+            
+            if (!trends.latencyTrend || trends.latencyTrend.length < 5) {
+                if (latencyTrendEl) {
+                    latencyTrendEl.textContent = 'Collecting data...';
+                    latencyTrendEl.style.color = 'var(--text-secondary)';
+                }
+                if (latencyIndicatorEl) {
+                    latencyIndicatorEl.textContent = '⏳';
+                    latencyIndicatorEl.style.color = 'var(--text-secondary)';
+                }
+            } else {
+                const recentLatency = trends.latencyTrend.slice(-5).map(d => Number(d.value)).filter(v => !isNaN(v));
+                const earlierLatency = trends.latencyTrend.slice(-10, -5).map(d => Number(d.value)).filter(v => !isNaN(v));
+                
+                if (recentLatency.length >= 3 && earlierLatency.length >= 3) {
+                    const recentAvg = recentLatency.reduce((a, b) => a + b, 0) / recentLatency.length;
+                    const earlierAvg = earlierLatency.reduce((a, b) => a + b, 0) / earlierLatency.length;
+                    
+                    const changePercent = ((recentAvg - earlierAvg) / earlierAvg * 100).toFixed(1);
+                    
+                    if (recentAvg > earlierAvg * 1.2) {
+                        if (latencyTrendEl) {
+                            latencyTrendEl.innerHTML = `<strong>Getting Slower</strong><br><small>(+${changePercent}%)</small>`;
+                            latencyTrendEl.style.color = 'var(--error-red)';
+                        }
+                        if (latencyIndicatorEl) {
+                            latencyIndicatorEl.textContent = '📈';
+                            latencyIndicatorEl.style.color = 'var(--error-red)';
+                        }
+                    } else if (recentAvg < earlierAvg * 0.8) {
+                        if (latencyTrendEl) {
+                            latencyTrendEl.innerHTML = `<strong>Getting Faster</strong><br><small>(${changePercent}%)</small>`;
+                            latencyTrendEl.style.color = 'var(--success-green)';
+                        }
+                        if (latencyIndicatorEl) {
+                            latencyIndicatorEl.textContent = '📉';
+                            latencyIndicatorEl.style.color = 'var(--success-green)';
+                        }
+                    } else {
+                        if (latencyTrendEl) {
+                            latencyTrendEl.innerHTML = `<strong>Stable</strong><br><small>Avg: ${recentAvg.toFixed(0)}ms</small>`;
+                            latencyTrendEl.style.color = 'var(--text-primary)';
+                        }
+                        if (latencyIndicatorEl) {
+                            latencyIndicatorEl.textContent = '→';
+                            latencyIndicatorEl.style.color = 'var(--text-primary)';
+                        }
+                    }
+                } else {
+                    if (latencyTrendEl) {
+                        latencyTrendEl.textContent = 'Insufficient data';
+                        latencyTrendEl.style.color = 'var(--text-secondary)';
+                    }
+                    if (latencyIndicatorEl) {
+                        latencyIndicatorEl.textContent = '⏳';
+                        latencyIndicatorEl.style.color = 'var(--text-secondary)';
+                    }
+                }
+            }
+            
+            // Success rate trend
+            const successTrendEl = document.getElementById('successTrend');
+            const successIndicatorEl = document.getElementById('successIndicator');
+            
+            if (!trends.successRateTrend || trends.successRateTrend.length < 5) {
+                if (successTrendEl) {
+                    successTrendEl.textContent = 'Collecting data...';
+                    successTrendEl.style.color = 'var(--text-secondary)';
+                }
+                if (successIndicatorEl) {
+                    successIndicatorEl.textContent = '⏳';
+                    successIndicatorEl.style.color = 'var(--text-secondary)';
+                }
+            } else {
+                const recent = trends.successRateTrend.slice(-5);
+                const earlier = trends.successRateTrend.slice(-10, -5);
+                
+                if (recent.length >= 3 && earlier.length >= 3) {
+                    const recentSuccess = recent.filter(d => d.success).length / recent.length;
+                    const earlierSuccess = earlier.filter(d => d.success).length / earlier.length;
+                    
+                    const recentPct = (recentSuccess * 100).toFixed(1);
+                    const earlierPct = (earlierSuccess * 100).toFixed(1);
+                    
+                    if (recentSuccess < earlierSuccess * 0.8 && earlierSuccess > 0) {
+                        if (successTrendEl) {
+                            successTrendEl.innerHTML = `<strong>Declining</strong><br><small>${recentPct}% (was ${earlierPct}%)</small>`;
+                            successTrendEl.style.color = 'var(--error-red)';
+                        }
+                        if (successIndicatorEl) {
+                            successIndicatorEl.textContent = '📉';
+                            successIndicatorEl.style.color = 'var(--error-red)';
+                        }
+                    } else if (recentSuccess > earlierSuccess * 1.1 || (earlierSuccess === 0 && recentSuccess > 0)) {
+                        if (successTrendEl) {
+                            successTrendEl.innerHTML = `<strong>Improving</strong><br><small>${recentPct}% (was ${earlierPct}%)</small>`;
+                            successTrendEl.style.color = 'var(--success-green)';
+                        }
+                        if (successIndicatorEl) {
+                            successIndicatorEl.textContent = '📈';
+                            successIndicatorEl.style.color = 'var(--success-green)';
+                        }
+                    } else {
+                        if (successTrendEl) {
+                            successTrendEl.innerHTML = `<strong>Stable</strong><br><small>${recentPct}% success</small>`;
+                            successTrendEl.style.color = 'var(--text-primary)';
+                        }
+                        if (successIndicatorEl) {
+                            successIndicatorEl.textContent = '→';
+                            successIndicatorEl.style.color = 'var(--text-primary)';
+                        }
+                    }
+                } else {
+                    if (successTrendEl) {
+                        successTrendEl.textContent = 'Insufficient data';
+                        successTrendEl.style.color = 'var(--text-secondary)';
+                    }
+                    if (successIndicatorEl) {
+                        successIndicatorEl.textContent = '⏳';
+                        successIndicatorEl.style.color = 'var(--text-secondary)';
+                    }
+                }
+            }
+        }
+        
+        // Update history table
+        function updateHistoryTable(requestLog) {
+            const tableBody = document.getElementById('historyTableBody');
+            
+            // Remove "no data" row if it exists
+            const noDataRow = tableBody.querySelector('.no-data');
+            if (noDataRow) {
+                noDataRow.remove();
+            }
+
+            // Create new row
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${requestLog.timestamp.toLocaleString()}</td>
+                <td>${requestLog.service.charAt(0).toUpperCase() + requestLog.service.slice(1)}</td>
+                <td class="${requestLog.success ? 'status-success' : 'status-failed'}">
+                    ${requestLog.success ? '✅ Success' : '❌ Failed'}
+                </td>
+                <td>${requestLog.latency}ms</td>
+                <td>${requestLog.responseSize} chars</td>
+                <td>${requestLog.errorType || '-'}</td>
+            `;
+
+            // Insert at the beginning
+            tableBody.insertBefore(row, tableBody.firstChild);
+
+            // Keep only last 100 rows
+            const rows = tableBody.querySelectorAll('tr');
+            if (rows.length > 100) {
+                tableBody.removeChild(rows[rows.length - 1]);
+            }
+        }
+
+        // Update automation counter
+        function updateAutomationCounter() {
+            document.getElementById('automationCounter').textContent = 
+                `${automationState.requestCount} requests sent`;
+        }
+
+        // Clear all charts
+        function clearCharts() {
+            analyticsData.performanceHistory = [];
+            Object.keys(analyticsData.serviceStats).forEach(service => {
+                analyticsData.serviceStats[service] = {
+                    requests: 0, failures: 0, totalLatency: 0, uptimeStart: Date.now()
+                };
+            });
+            
+            updateCharts();
+            updateInsights({});
+        }
+
+        // Clear latency trends chart only
+        function clearLatencyChart() {
+            if (charts.latency) {
+                charts.latency.data.labels = [];
+                charts.latency.data.datasets.forEach(dataset => {
+                    dataset.data = [];
+                });
+                charts.latency.update();
+            }
+        }
+
+        // Export analytics data as CSV
+        function exportAnalyticsData() {
+            const csvContent = [
+                ['Timestamp', 'Service', 'Success', 'Latency (ms)', 'Response Size', 'Error Type', 'Automated'].join(','),
+                ...analyticsData.requests.map(r => [
+                    r.timestamp.toISOString(),
+                    r.service,
+                    r.success,
+                    r.latency,
+                    r.responseSize,
+                    r.errorType || '',
+                    r.isAutomated || false
+                ].join(','))
+            ].join('\\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ai-resilience-data-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Clear analytics history
+        function clearAnalyticsHistory() {
+            if (confirm('Are you sure you want to clear all analytics history?')) {
+                analyticsData.requests = [];
+                analyticsData.performanceHistory = [];
+                
+                const tableBody = document.getElementById('historyTableBody');
+                tableBody.innerHTML = '<tr><td colspan="6" class="no-data">No data collected yet. Start automation to begin analysis.</td></tr>';
+                
+                clearCharts();
+                localStorage.removeItem('aiResilienceAnalytics');
+            }
+        }
+
+        // Store analytics data in localStorage
+        function storeAnalyticsData() {
+            try {
+                // Keep only essential data for storage
+                const dataToStore = {
+                    requests: analyticsData.requests.slice(-500), // Last 500 requests
+                    serviceStats: analyticsData.serviceStats,
+                    automationCount: automationState.requestCount
+                };
+                localStorage.setItem('aiResilienceAnalytics', JSON.stringify(dataToStore));
+            } catch (error) {
+                console.warn('Could not store analytics data:', error);
+            }
+        }
+
+        // Load stored analytics data
+        function loadStoredAnalytics() {
+            try {
+                const stored = localStorage.getItem('aiResilienceAnalytics');
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    
+                    // Restore requests (convert timestamp strings back to Date objects)
+                    if (data.requests) {
+                        analyticsData.requests = data.requests.map(r => ({
+                            ...r,
+                            timestamp: new Date(r.timestamp)
+                        }));
+                        
+                        // Rebuild history table
+                        analyticsData.requests.forEach(updateHistoryTable);
+                    }
+                    
+                    // Restore service stats
+                    if (data.serviceStats) {
+                        analyticsData.serviceStats = { ...analyticsData.serviceStats, ...data.serviceStats };
+                        
+                        // Ensure recentLatencies array exists for all services (migration for new feature)
+                        ['gemini', 'cohere', 'huggingface'].forEach(service => {
+                            if (!analyticsData.serviceStats[service].recentLatencies) {
+                                analyticsData.serviceStats[service].recentLatencies = [];
+                            } else {
+                                // Migrate old format (just numbers) to new format (objects with timestamp)
+                                analyticsData.serviceStats[service].recentLatencies = 
+                                    analyticsData.serviceStats[service].recentLatencies.map(entry => {
+                                        if (typeof entry === 'number') {
+                                            // Old format: just latency number
+                                            return { latency: entry, timestamp: new Date() };
+                                        }
+                                        // Convert timestamp string to Date object
+                                        if (entry.timestamp && !(entry.timestamp instanceof Date)) {
+                                            entry.timestamp = new Date(entry.timestamp);
+                                        }
+                                        return entry; // Already new format
+                                    });
+                            }
+                        });
+                    }
+                    
+                    // Restore automation count
+                    if (data.automationCount) {
+                        automationState.requestCount = data.automationCount;
+                        updateAutomationCounter();
+                    }
+                }
+            } catch (error) {
+                console.warn('Could not load stored analytics data:', error);
+            }
+        }
+
+        // ========================================
+        // Chaos Engineering Functions
+        // ========================================
+
+        // Toggle chaos panel visibility
+        function toggleChaosPanel() {
+            const panel = document.getElementById('chaosPanel');
+            const toggle = document.getElementById('chaosToggle');
+            
+            if (panel.classList.contains('collapsed')) {
+                panel.classList.remove('collapsed');
+                toggle.classList.remove('collapsed');
+                toggle.textContent = '▼';
+            } else {
+                panel.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+                toggle.textContent = '▶';
+            }
+        }
+
+        // Update intensity display based on chaos type
+        function updateIntensityDisplay() {
+            const intensity = document.getElementById('chaosIntensity').value;
+            const chaosType = document.getElementById('chaosType').value;
+            const intensityValue = document.getElementById('intensityValue');
+            const intensityUnit = document.getElementById('intensityUnit');
+            const intensityHelp = document.getElementById('intensityHelp');
+            
+            intensityValue.textContent = intensity;
+            
+            // Adjust display based on chaos type
+            switch(chaosType) {
+                case 'latency':
+                    intensityUnit.textContent = 'ms';
+                    intensityHelp.textContent = `Will add ${intensity}ms delay to each request`;
+                    // Scale slider for latency (0-10000ms)
+                    document.getElementById('chaosIntensity').max = 10000;
+                    document.getElementById('chaosIntensity').value = Math.min(intensity, 10000);
+                    break;
+                case 'failure':
+                case 'intermittent':
+                    intensityUnit.textContent = '%';
+                    intensityHelp.textContent = `${intensity}% chance of request failure`;
+                    document.getElementById('chaosIntensity').max = 100;
+                    break;
+                case 'timeout':
+                    intensityUnit.textContent = 'x100ms';
+                    intensityHelp.textContent = `Requests will hang for ${intensity * 100}ms then fail`;
+                    document.getElementById('chaosIntensity').max = 300;
+                    break;
+                case 'unavailable':
+                    intensityUnit.textContent = '';
+                    intensityHelp.textContent = 'Service will be completely unavailable (intensity ignored)';
+                    break;
+                case 'corruption':
+                    intensityUnit.textContent = '';
+                    intensityHelp.textContent = 'Responses will be corrupted/malformed (intensity ignored)';
+                    break;
+                default:
+                    intensityUnit.textContent = '%';
+                    intensityHelp.textContent = 'Intensity setting';
+            }
+        }
+
+        // Update intensity display when chaos type changes
+        document.getElementById('chaosType')?.addEventListener('change', updateIntensityDisplay);
+
+        // Inject chaos experiment
+        async function injectChaos() {
+            const service = document.getElementById('chaosService').value;
+            const type = document.getElementById('chaosType').value;
+            const intensity = parseInt(document.getElementById('chaosIntensity').value);
+            const duration = parseInt(document.getElementById('chaosDuration').value);
+            
+            const btn = document.getElementById('injectChaosBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Injecting...';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/chaos/inject`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ service, type, intensity, duration })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('🔥 Chaos injected:', data.experiment);
+                    showNotification(`Chaos injected: ${type} on ${service} for ${duration}s`, 'success');
+                    
+                    // Mark service card as under chaos
+                    markServiceUnderChaos(service, type);
+                    
+                    // Fetch and update active experiments
+                    updateActiveExperiments();
+                } else {
+                    showNotification(`Failed to inject chaos: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Chaos inject error:', error);
+                showNotification(`Error injecting chaos: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔥 Inject Chaos';
+            }
+        }
+
+        // Stop all chaos experiments
+        async function stopAllChaos() {
+            const btn = document.getElementById('stopAllChaosBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Stopping...';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/chaos/stop`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ service: 'all' })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('🔵 All chaos stopped');
+                    showNotification('All chaos experiments stopped', 'success');
+                    clearAllChaosMarkers();
+                    updateActiveExperiments();
+                } else {
+                    showNotification(`Failed to stop chaos: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Chaos stop error:', error);
+                showNotification(`Error stopping chaos: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '⏹️ Stop All';
+            }
+        }
+
+        // Stop individual chaos experiment
+        async function stopChaosExperiment(service) {
+            try {
+                const response = await fetch(`${BACKEND_URL}/chaos/stop`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ service })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log(`🔵 Chaos stopped for ${service}`);
+                    showNotification(`Chaos stopped for ${service}`, 'success');
+                    clearServiceChaosMarker(service);
+                    updateActiveExperiments();
+                }
+            } catch (error) {
+                console.error('Chaos stop error:', error);
+                showNotification(`Error stopping chaos: ${error.message}`, 'error');
+            }
+        }
+
+        // Update active experiments display
+        async function updateActiveExperiments() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/chaos/status`);
+                const data = await response.json();
+                
+                const listContainer = document.getElementById('activeExperimentsList');
+                
+                if (data.active && data.active.length > 0) {
+                    listContainer.innerHTML = data.active.map(exp => `
+                        <div class="experiment-item">
+                            <div class="experiment-info">
+                                <div class="experiment-service">
+                                    🔥 ${capitalizeService(exp.service)} - ${getChaoEmoji(exp.type)} ${exp.type}
+                                </div>
+                                <div class="experiment-details">
+                                    Intensity: ${exp.intensity}${getIntensityUnit(exp.type)} | Duration: ${exp.remainingSeconds}s remaining
+                                </div>
+                            </div>
+                            <div class="experiment-timer">⏱️ ${exp.remainingSeconds}s</div>
+                            <button class="experiment-stop-btn" onclick="stopChaosExperiment('${exp.service}')">
+                                Stop
+                            </button>
+                        </div>
+                    `).join('');
+                    
+                    // Ensure service cards are marked
+                    data.active.forEach(exp => {
+                        markServiceUnderChaos(exp.service, exp.type);
+                    });
+                } else {
+                    listContainer.innerHTML = '<div class="no-experiments">No active chaos experiments</div>';
+                    clearAllChaosMarkers();
+                }
+            } catch (error) {
+                console.error('Error fetching chaos status:', error);
+            }
+        }
+
+        // Helper functions
+        function capitalizeService(service) {
+            const names = {
+                'gemini': 'Gemini',
+                'cohere': 'Cohere',
+                'huggingface': 'Hugging Face'
+            };
+            return names[service] || service;
+        }
+
+        function getChaoEmoji(type) {
+            const emojis = {
+                'latency': '🐌',
+                'failure': '❌',
+                'timeout': '⏱️',
+                'intermittent': '🎲',
+                'unavailable': '🚫',
+                'corruption': '🔀'
+            };
+            return emojis[type] || '🔥';
+        }
+
+        function getIntensityUnit(type) {
+            switch(type) {
+                case 'latency': return 'ms';
+                case 'failure':
+                case 'intermittent': return '%';
+                case 'timeout': return 'x100ms';
+                default: return '';
+            }
+        }
+
+        function markServiceUnderChaos(service, type) {
+            const serviceCard = document.querySelector(`#${service}-status`)?.closest('.service-card');
+            if (serviceCard) {
+                serviceCard.classList.add('chaos-active');
+                
+                // Add chaos badge if not present
+                const serviceName = serviceCard.querySelector('.service-name');
+                if (serviceName && !serviceName.querySelector('.chaos-badge')) {
+                    const badge = document.createElement('span');
+                    badge.className = 'chaos-badge';
+                    badge.textContent = `🔥 ${type}`;
+                    serviceName.appendChild(badge);
+                }
+            }
+        }
+
+        function clearServiceChaosMarker(service) {
+            const serviceCard = document.querySelector(`#${service}-status`)?.closest('.service-card');
+            if (serviceCard) {
+                serviceCard.classList.remove('chaos-active');
+                const badge = serviceCard.querySelector('.chaos-badge');
+                if (badge) badge.remove();
+            }
+        }
+
+        function clearAllChaosMarkers() {
+            document.querySelectorAll('.service-card').forEach(card => {
+                card.classList.remove('chaos-active');
+            });
+            document.querySelectorAll('.chaos-badge').forEach(badge => {
+                badge.remove();
+            });
+        }
+
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 16px 20px;
+                background: ${type === 'success' ? 'var(--success-green)' : type === 'error' ? 'var(--error-red)' : 'var(--primary-blue)'};
+                color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                font-weight: 500;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 4 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 4000);
+        }
+
+        // Poll chaos status every 2 seconds when dashboard is active
+        let chaosPollingInterval = null;
+        function startChaosPolling() {
+            updateActiveExperiments(); // Initial fetch
+            chaosPollingInterval = setInterval(updateActiveExperiments, 2000);
+        }
+
+        function stopChaosPolling() {
+            if (chaosPollingInterval) {
+                clearInterval(chaosPollingInterval);
+                chaosPollingInterval = null;
+            }
+        }
+
+        // Start chaos polling when dashboard loads
+        document.addEventListener('DOMContentLoaded', () => {
+            startChaosPolling();
+            updateIntensityDisplay(); // Set initial intensity display
+        });
+
+    </script>
+</body>
+</html>
