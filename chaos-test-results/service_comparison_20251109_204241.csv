@@ -1,0 +1,1 @@
+Timestamp,Service,Total_Requests,Success_Rate_%,Avg_Latency_Ms,Total_Failures,Circuit_Breaker_Trips,Avg_Recovery_Time_Sec,Resilience_Score

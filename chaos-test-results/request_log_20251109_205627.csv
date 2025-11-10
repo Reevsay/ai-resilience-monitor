@@ -1,0 +1,4 @@
+Timestamp,Experiment_ID,Service,Chaos_Type,Chaos_Active,Success,Latency_Ms,Error_Type,Circuit_Breaker_State,Response_Size
+2025-11-09T20:56:30.422142,LOAD_NORMAL,cohere,NONE,False,True,3130,,UNKNOWN,188
+2025-11-09T20:56:37.835177,LOAD_NORMAL,gemini,NONE,False,True,2411,,UNKNOWN,178
+2025-11-09T20:56:44.390876,LOAD_NORMAL,gemini,NONE,False,True,1554,,UNKNOWN,173
