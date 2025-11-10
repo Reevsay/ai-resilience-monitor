@@ -1,0 +1,40 @@
+services:
+  ai-proxy:
+    build: .
+    environment:
+      PORT: 3000
+      # Real AI API Keys (read from .env if present)
+      HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      COHERE_API_KEY: ${COHERE_API_KEY}
+      # Preferred AI service (huggingface, gemini, cohere, openai)
+      PREFERRED_AI_SERVICE: ${PREFERRED_AI_SERVICE:-huggingface}
+      # Demo mode: when true, health checks are simulated and /ai echoes requests
+      TEST_MODE: ${TEST_MODE:-true}
+      FAIL_RATE: 0.05
+      DELAY_RATE: 0.02
+      MIN_DELAY: 50
+      MAX_DELAY: 200
+      CORRUPT_RATE: 0.01
+      NETWORK_ERROR_RATE: 0.02
+      MEMORY_ERROR_RATE: 0.02
+      AUTH_ERROR_RATE: 0.03
+      RATE_LIMIT_ERROR_RATE: 0.02
+      PARTIAL_RESPONSE_RATE: 0.05
+      SLOW_RESPONSE_RATE: 0.02
+    ports:
+      - '3000:3000'
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - '9090:9090'
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - '3001:3000'
+    depends_on:
+      - prometheus
