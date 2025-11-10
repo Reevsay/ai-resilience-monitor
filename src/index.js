@@ -3,6 +3,9 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const client = require('prom-client');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+const fs = require('fs');
 
 // ========== CRITICAL: Global Error Handlers to Prevent Crashes ==========
 process.on('unhandledRejection', (reason, promise) => {
@@ -19,6 +22,100 @@ process.on('uncaughtException', (error) => {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ========== Database Setup for Persistent Metrics ==========
+const DB_PATH = path.join(__dirname, '..', 'data', 'monitoring.db');
+
+// Ensure data directory exists
+const dataDir = path.join(__dirname, '..', 'data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+// Initialize SQLite database with WAL mode for better concurrent access
+const db = new sqlite3.Database(DB_PATH, (err) => {
+  if (err) {
+    console.error('❌ Database connection error:', err);
+  } else {
+    console.log('✅ Connected to SQLite database:', DB_PATH);
+  }
+});
+
+// Enable WAL mode for better concurrent access (critical for multi-process access)
+db.run('PRAGMA journal_mode = WAL;', (err) => {
+  if (err) {
+    console.error('❌ Failed to enable WAL mode:', err);
+  } else {
+    console.log('✅ WAL mode enabled for concurrent access');
+  }
+});
+
+// Set busy timeout to handle locks gracefully
+db.run('PRAGMA busy_timeout = 5000;', (err) => {
+  if (err) {
+    console.error('❌ Failed to set busy timeout:', err);
+  } else {
+    console.log('✅ Busy timeout set to 5000ms');
+  }
+});
+
+// Create cumulative_metrics table for persistent counters
+db.serialize(() => {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS cumulative_metrics (
+      key TEXT PRIMARY KEY,
+      value INTEGER DEFAULT 0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  
+  // Initialize totalRequests counter if not exists
+  db.run(`
+    INSERT OR IGNORE INTO cumulative_metrics (key, value) 
+    VALUES ('totalRequests', 0)
+  `);
+  
+  console.log('✅ Database tables initialized');
+});
+
+// Helper: Get cumulative metric from database
+function getCumulativeMetric(key) {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT value FROM cumulative_metrics WHERE key = ?', [key], (err, row) => {
+      if (err) reject(err);
+      else resolve(row ? row.value : 0);
+    });
+  });
+}
+
+// Helper: Increment cumulative metric in database
+function incrementCumulativeMetric(key, amount = 1) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'UPDATE cumulative_metrics SET value = value + ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?',
+      [amount, key],
+      function(err) {
+        if (err) reject(err);
+        else resolve(this.changes);
+      }
+    );
+  });
+}
+
+// Helper: Reset cumulative metric in database
+function resetCumulativeMetric(key) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'UPDATE cumulative_metrics SET value = 0, updated_at = CURRENT_TIMESTAMP WHERE key = ?',
+      [key],
+      function(err) {
+        if (err) reject(err);
+        else resolve(this.changes);
+      }
+    );
+  });
+}
+// =============================================================
 
 // API Configuration from environment variables
 const API_KEYS = {
@@ -549,19 +646,27 @@ app.use((req, res, next) => {
 
 // API Endpoints
 
-// Health check endpoint
+// Health check endpoint - EXCLUDED from chaos injection for monitoring stability
 app.get('/test', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    uptime: Date.now() - metricsHistory.startTime
+    uptime: Date.now() - metricsHistory.startTime,
+    chaos_active: Object.keys(activeChaos).some(service => activeChaos[service].type !== null)
   });
 });
 
 // Get current metrics
-app.get('/metrics', (req, res) => {
+app.get('/metrics', async (req, res) => {
   try {
+    // Get cumulative total from database
+    const cumulativeTotalRequests = await getCumulativeMetric('totalRequests');
+    
     const metrics = calculateMetrics();
+    
+    // Override with database count for accurate cumulative total
+    metrics.totalRequests = cumulativeTotalRequests;
+    
     res.json(metrics);
   } catch (error) {
     console.error('Error calculating metrics:', error);
@@ -608,6 +713,55 @@ app.post('/circuit-breaker/reset', (req, res) => {
     }
   } catch (error) {
     console.error('Error resetting circuit breaker:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Reset All Metrics Endpoint
+app.post('/metrics/reset', async (req, res) => {
+  try {
+    // Reset all metrics to initial state
+    metricsHistory.totalRequests = 0;
+    metricsHistory.successfulRequests = 0;
+    metricsHistory.failedRequests = 0;
+    metricsHistory.totalLatency = 0;
+    metricsHistory.startTime = Date.now();
+    
+    // IMPORTANT: Reset cumulative counter in database
+    await resetCumulativeMetric('totalRequests');
+    
+    // Reset AI service metrics
+    Object.keys(metricsHistory.aiServices).forEach(service => {
+      metricsHistory.aiServices[service] = {
+        requests: 0,
+        failures: 0,
+        totalLatency: 0,
+        lastCheck: null,
+        status: 'unknown'
+      };
+    });
+    
+    // Reset circuit breakers
+    Object.values(circuitBreakers).forEach(cb => cb.reset());
+    
+    // Clear chaos experiments
+    Object.keys(activeChaos).forEach(service => {
+      activeChaos[service] = {
+        type: null,
+        intensity: 0,
+        endTime: null,
+        startTime: null
+      };
+    });
+    
+    console.log('🔄 All metrics and data have been reset (including database)');
+    
+    res.json({ 
+      success: true, 
+      message: 'All metrics, circuit breakers, and chaos experiments have been reset successfully'
+    });
+  } catch (error) {
+    console.error('Error resetting metrics:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -661,8 +815,11 @@ app.post('/ai', async (req, res) => {
   try {
     const { service = 'gemini', prompt, ...options } = req.body;
     
-    // Count TOTAL requests at the START
+    // Count TOTAL requests at the START (in-memory for current session)
     metricsHistory.totalRequests++;
+    
+    // ALSO increment cumulative counter in database for persistence
+    await incrementCumulativeMetric('totalRequests');
     
     // Count service-specific request at the START
     if (metricsHistory.aiServices[service]) {
@@ -672,6 +829,7 @@ app.post('/ai', async (req, res) => {
     if (!prompt) {
       // Decrement counters if validation fails before processing
       metricsHistory.totalRequests--;
+      await incrementCumulativeMetric('totalRequests', -1); // Decrement in DB too
       if (metricsHistory.aiServices[service]) {
         metricsHistory.aiServices[service].requests--;
       }
@@ -1033,6 +1191,289 @@ app.get('/prometheus', async (req, res) => {
   }
 });
 
+// ===========================================
+// Chaos Testing Management Endpoints
+// ===========================================
+
+const { spawn } = require('child_process');
+// fs and path already imported at top of file
+
+// Store active chaos testing process
+let chaosTestingProcess = null;
+let chaosTestingStatus = {
+  running: false,
+  startTime: null,
+  duration: 0,
+  mode: null,
+  totalRequests: 0,
+  successfulRequests: 0,
+  failedRequests: 0,
+  currentScenario: '',
+  lastOutput: '',
+  outputLines: [],
+  detailedLogs: []
+};
+
+// Start chaos testing
+app.post('/chaos-testing/start', (req, res) => {
+  try {
+    if (chaosTestingProcess) {
+      return res.json({
+        success: false,
+        message: 'Chaos testing is already running',
+        status: chaosTestingStatus
+      });
+    }
+
+    const { mode = 'validation', duration = 4, outputDir = 'chaos-test-results' } = req.body;
+
+    console.log(`🔥 Starting chaos testing in ${mode} mode...`);
+
+    const args = mode === 'validation' 
+      ? ['chaos-test.py', '--validation', '--output-dir', outputDir]
+      : ['chaos-test.py', '--duration', duration.toString(), '--output-dir', outputDir];
+
+    // Start the chaos testing process with UNBUFFERED output
+    chaosTestingProcess = spawn('python', ['-u', ...args], {
+      cwd: __dirname + '/..',
+      env: process.env
+    });
+
+    chaosTestingStatus = {
+      running: true,
+      startTime: new Date(),
+      duration: mode === 'validation' ? 0.5 : duration, // ~30 min for validation
+      mode: mode,
+      totalRequests: 0,
+      lastOutput: '',
+      outputLines: [],
+      pid: chaosTestingProcess.pid
+    };
+
+    // Capture output
+    chaosTestingProcess.stdout.on('data', (data) => {
+      const output = data.toString();
+      const lines = output.split('\n').filter(line => line.trim());
+      
+      console.log(`[Chaos Test Output] Received ${lines.length} lines`);
+      
+      lines.forEach(line => {
+        chaosTestingStatus.lastOutput = line;
+        
+        // Parse structured output from chaos test
+        const logEntry = {
+          timestamp: new Date().toISOString(),
+          message: line,
+          type: 'info'
+        };
+        
+        // Detect log types and extract metrics
+        if (line.includes('SUCCESS') || line.includes('✅')) {
+          logEntry.type = 'success';
+          chaosTestingStatus.successfulRequests = (chaosTestingStatus.successfulRequests || 0) + 1;
+        } else if (line.includes('FAILED') || line.includes('❌') || line.includes('ERROR')) {
+          logEntry.type = 'error';
+          chaosTestingStatus.failedRequests = (chaosTestingStatus.failedRequests || 0) + 1;
+        } else if (line.includes('WARNING') || line.includes('⚠️')) {
+          logEntry.type = 'warning';
+        } else if (line.includes('🔥') || line.includes('Chaos')) {
+          logEntry.type = 'chaos';
+        } else if (line.includes('Running') || line.includes('Starting')) {
+          logEntry.type = 'scenario';
+          // Extract scenario name
+          const scenarioMatch = line.match(/Running ([^.]+)/i) || line.match(/Starting ([^.]+)/i);
+          if (scenarioMatch) {
+            chaosTestingStatus.currentScenario = scenarioMatch[1];
+          }
+        }
+        
+        // Extract request count if present
+        const requestMatch = line.match(/Request #(\d+)/i);
+        if (requestMatch) {
+          chaosTestingStatus.totalRequests = parseInt(requestMatch[1]);
+        }
+        
+        // Add to output lines
+        chaosTestingStatus.outputLines.push(logEntry);
+        if (!chaosTestingStatus.detailedLogs) {
+          chaosTestingStatus.detailedLogs = [];
+        }
+        chaosTestingStatus.detailedLogs.push({
+          ...logEntry,
+          fullMessage: line
+        });
+        
+        console.log(`[Chaos Test] ${line}`);
+      });
+      
+      // Keep only last 100 lines
+      if (chaosTestingStatus.outputLines.length > 200) {
+        chaosTestingStatus.outputLines = chaosTestingStatus.outputLines.slice(-100);
+      }
+      if (chaosTestingStatus.detailedLogs && chaosTestingStatus.detailedLogs.length > 500) {
+        chaosTestingStatus.detailedLogs = chaosTestingStatus.detailedLogs.slice(-500);
+      }
+    });
+
+    chaosTestingProcess.stderr.on('data', (data) => {
+      const output = data.toString();
+      chaosTestingStatus.outputLines.push({
+        timestamp: new Date().toISOString(),
+        message: output,
+        error: true
+      });
+      
+      if (chaosTestingStatus.outputLines.length > 100) {
+        chaosTestingStatus.outputLines.shift();
+      }
+      
+      console.error(`[Chaos Test Error] ${output}`);
+    });
+
+    chaosTestingProcess.on('close', (code) => {
+      console.log(`🏁 Chaos testing process exited with code ${code}`);
+      chaosTestingStatus.running = false;
+      chaosTestingStatus.endTime = new Date();
+      chaosTestingProcess = null;
+    });
+
+    res.json({
+      success: true,
+      message: `Chaos testing started in ${mode} mode`,
+      status: chaosTestingStatus
+    });
+
+  } catch (error) {
+    console.error('Error starting chaos testing:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Stop chaos testing
+app.post('/chaos-testing/stop', (req, res) => {
+  try {
+    if (!chaosTestingProcess) {
+      return res.json({
+        success: false,
+        message: 'No chaos testing process running'
+      });
+    }
+
+    console.log('🛑 Stopping chaos testing...');
+    
+    // Send SIGINT to allow graceful shutdown
+    chaosTestingProcess.kill('SIGINT');
+    
+    chaosTestingStatus.running = false;
+    chaosTestingStatus.endTime = new Date();
+
+    res.json({
+      success: true,
+      message: 'Chaos testing stopped',
+      status: chaosTestingStatus
+    });
+
+  } catch (error) {
+    console.error('Error stopping chaos testing:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get chaos testing status
+app.get('/chaos-testing/status', (req, res) => {
+  try {
+    console.log(`📊 Chaos testing status requested. Running: ${chaosTestingStatus.running}, Output lines: ${chaosTestingStatus.outputLines.length}`);
+    res.json({
+      success: true,
+      status: chaosTestingStatus
+    });
+  } catch (error) {
+    console.error('Error getting chaos testing status:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get chaos testing results
+app.get('/chaos-testing/results', (req, res) => {
+  try {
+    const resultsDir = path.join(__dirname, '..', 'chaos-test-results');
+    
+    if (!fs.existsSync(resultsDir)) {
+      return res.json({
+        success: true,
+        results: []
+      });
+    }
+
+    const files = fs.readdirSync(resultsDir);
+    const results = files
+      .filter(f => f.endsWith('.txt'))
+      .map(f => {
+        const filePath = path.join(resultsDir, f);
+        const stats = fs.statSync(filePath);
+        return {
+          filename: f,
+          path: filePath,
+          size: stats.size,
+          modified: stats.mtime,
+          created: stats.birthtime
+        };
+      })
+      .sort((a, b) => b.modified - a.modified);
+
+    res.json({
+      success: true,
+      results: results
+    });
+
+  } catch (error) {
+    console.error('Error getting chaos testing results:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get specific result file
+app.get('/chaos-testing/results/:filename', (req, res) => {
+  try {
+    const { filename } = req.params;
+    const filePath = path.join(__dirname, '..', 'chaos-test-results', filename);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        error: 'File not found'
+      });
+    }
+
+    const content = fs.readFileSync(filePath, 'utf8');
+    
+    res.json({
+      success: true,
+      filename: filename,
+      content: content
+    });
+
+  } catch (error) {
+    console.error('Error reading result file:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Error handling middleware
 app.use((error, req, res, next) => {
   console.error('Unhandled error:', error);
@@ -1084,16 +1525,32 @@ process.on('SIGINT', () => {
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
   console.error('Stack:', error.stack);
+  console.error('Time:', new Date().toISOString());
+  
+  // Log error details
+  if (error.code) console.error('Error Code:', error.code);
+  if (error.errno) console.error('Error Number:', error.errno);
+  if (error.syscall) console.error('System Call:', error.syscall);
+  
   // Don't exit - keep the server running
   console.log('⚠️  Server continuing despite error...');
+  console.log('💓 Server still alive - monitoring will detect if crashed');
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Promise Rejection at:', promise);
   console.error('Reason:', reason);
+  console.error('Time:', new Date().toISOString());
+  
+  // Log stack trace if available
+  if (reason && reason.stack) {
+    console.error('Stack:', reason.stack);
+  }
+  
   // Don't exit - keep the server running
   console.log('⚠️  Server continuing despite error...');
+  console.log('💓 Server still alive - monitoring will detect if crashed');
 });
 
 // Keep alive - log heartbeat every 5 minutes
