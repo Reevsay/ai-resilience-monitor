@@ -4,11 +4,15 @@ AI Resilience Monitor Dashboard
 A Flask web application serving a real-time dashboard for AI service monitoring.
 """
 import sys
+import os
 import argparse
 from flask import Flask, render_template, jsonify, request
 import requests
 import logging
 from datetime import datetime
+
+# Add backend directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 from database import get_datastore
 
 # Configure logging
