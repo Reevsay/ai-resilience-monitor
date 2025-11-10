@@ -40,6 +40,8 @@ Thumbs.db
 *.log
 *.tmp
 *.temp
+logs/
+monitor.log
 
 # Build outputs and distribution
 dist/
