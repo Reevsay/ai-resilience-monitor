@@ -1,0 +1,30 @@
+# Sample Chaos Test Report
+# This is a sample output file showing the format of chaos test results
+
+========================================
+CHAOS ENGINEERING TEST REPORT
+========================================
+Test Date: 2024-11-21
+Test Duration: 120 seconds
+Test Mode: Validation
+
+SUMMARY:
+- Total Requests: 150
+- Successful: 142 (94.67%)
+- Failed: 8 (5.33%)
+- Average Latency: 1234ms
+
+CHAOS EXPERIMENTS EXECUTED:
+1. Latency Injection (30s) - Service: gemini
+2. Failure Injection (30s) - Service: cohere
+3. Timeout Simulation (30s) - Service: huggingface
+
+CIRCUIT BREAKER BEHAVIOR:
+- Gemini: CLOSED -> OPEN -> HALF-OPEN -> CLOSED
+- Cohere: CLOSED -> OPEN (recovered)
+- HuggingFace: CLOSED (stable)
+
+RESILIENCE SCORE: 94.67%
+STATUS: PASSED ✓
+
+For full test results, run: node scripts/testing/chaos-test.py
