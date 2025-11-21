@@ -9,15 +9,27 @@ const fs = require('fs');
 
 // ========== CRITICAL: Global Error Handlers to Prevent Crashes ==========
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Promise Rejection:', reason);
-  console.error('Promise:', promise);
+  console.error('❌❌❌ [GLOBAL] Unhandled Promise Rejection detected!');
+  console.error('[GLOBAL] Reason:', reason);
+  console.error('[GLOBAL] Promise:', promise);
+  if (reason && reason.stack) {
+    console.error('[GLOBAL] Stack trace:', reason.stack);
+  }
   // Don't exit - log and continue
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
-  console.error('Stack:', error.stack);
+  console.error('❌❌❌ [GLOBAL] Uncaught Exception detected!');
+  console.error('[GLOBAL] Error message:', error.message);
+  console.error('[GLOBAL] Error name:', error.name);
+  console.error('[GLOBAL] Stack trace:', error.stack);
   // Don't exit - log and continue
+});
+
+process.on('warning', (warning) => {
+  console.warn('⚠️ [GLOBAL] Node.js warning:', warning.name);
+  console.warn('[GLOBAL] Warning message:', warning.message);
+  console.warn('[GLOBAL] Stack trace:', warning.stack);
 });
 
 const app = express();
@@ -130,6 +142,13 @@ const API_URLS = {
   huggingface: process.env.HUGGINGFACE_API_URL || 'https://api-inference.huggingface.co/models/gpt2'
 };
 
+// DEBUG: Log ALL incoming requests FIRST - before any parsing or CORS
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[RAW-REQUEST] ${req.method} ${req.url}`);
+  next();
+});
+
 // Enable CORS for all routes
 app.use(cors({
   origin: '*',
@@ -137,7 +156,21 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.json());
+// Increase body size limit - default is 100kb which might be too small
+app.use(express.json({ limit: '10mb' }));
+
+// Log after successful parsing
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[PARSED-REQUEST] ${req.method} ${req.url}`);
+  
+  // Set timeout for all requests to prevent hanging
+  req.setTimeout(15000, () => {
+    console.error(`[REQUEST-TIMEOUT] Request timed out after 15s: ${req.method} ${req.url}`);
+  });
+  
+  next();
+});
 
 // Prometheus metrics setup
 const register = new client.Registry();
@@ -470,16 +503,17 @@ function calculateMetrics() {
     uptime: Date.now() - metricsHistory.startTime,
     aiServices: Object.keys(metricsHistory.aiServices).reduce((acc, service) => {
       const serviceData = metricsHistory.aiServices[service];
+      const successCount = serviceData.requests - serviceData.failures;
       acc[service] = {
         requests: serviceData.requests,
         failures: serviceData.failures,
         successRate: serviceData.requests > 0 
           ? Math.round(((serviceData.requests - serviceData.failures) / serviceData.requests) * 100 * 10) / 10
           : 100,
-        avgLatency: serviceData.requests > 0 && serviceData.totalLatency > 0
-          ? Math.round(serviceData.totalLatency / (serviceData.requests - serviceData.failures))
+        avgLatency: successCount > 0 && serviceData.totalLatency > 0
+          ? Math.round(serviceData.totalLatency / successCount)
           : 0,
-        status: serviceData.status,
+        status: serviceData.failures > 5 ? 'degraded' : (serviceData.status || 'unknown'),
         lastCheck: serviceData.lastCheck
       };
       return acc;
@@ -713,6 +747,62 @@ app.post('/circuit-breaker/reset', (req, res) => {
     }
   } catch (error) {
     console.error('Error resetting circuit breaker:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Rig Current Metrics Endpoint - Inject ~10% failures into existing data
+app.post('/metrics/rig', (req, res) => {
+  try {
+    const { errorPercentage = 10 } = req.body;
+    const errorRate = errorPercentage / 100;
+    
+    console.log(`🎲 Rigging current metrics with ${errorPercentage}% error rate...`);
+    
+    const riggedServices = [];
+    
+    // Rig each service that has requests
+    Object.keys(metricsHistory.aiServices).forEach(service => {
+      const serviceData = metricsHistory.aiServices[service];
+      
+      if (serviceData.requests > 0) {
+        // Calculate how many failures to inject based on current requests
+        const targetFailures = Math.floor(serviceData.requests * errorRate);
+        const failuresToAdd = Math.max(0, targetFailures - serviceData.failures);
+        
+        // Add failures
+        serviceData.failures += failuresToAdd;
+        
+        // Update total failed requests
+        metricsHistory.failedRequests += failuresToAdd;
+        metricsHistory.successfulRequests -= failuresToAdd;
+        
+        // Set status to degraded if failures > 5
+        serviceData.status = serviceData.failures > 5 ? 'degraded' : 'healthy';
+        
+        riggedServices.push({
+          service,
+          totalRequests: serviceData.requests,
+          failures: serviceData.failures,
+          failureRate: ((serviceData.failures / serviceData.requests) * 100).toFixed(1) + '%'
+        });
+        
+        console.log(`   📊 ${service}: ${serviceData.requests} requests, ${serviceData.failures} failures (${((serviceData.failures / serviceData.requests) * 100).toFixed(1)}%)`);
+      }
+    });
+    
+    console.log('✅ Metrics rigged successfully');
+    
+    res.json({
+      success: true,
+      message: `Metrics rigged with ${errorPercentage}% error rate`,
+      services: riggedServices,
+      totalRequests: metricsHistory.totalRequests,
+      totalFailures: metricsHistory.failedRequests,
+      overallFailureRate: ((metricsHistory.failedRequests / metricsHistory.totalRequests) * 100).toFixed(1) + '%'
+    });
+  } catch (error) {
+    console.error('Error rigging metrics:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1214,10 +1304,18 @@ let chaosTestingStatus = {
   detailedLogs: []
 };
 
-// Start chaos testing
+// Start chaos testing - SYNC handler to prevent async issues
 app.post('/chaos-testing/start', (req, res) => {
+  // FIRST LINE - Log immediately before ANY processing
+  console.log('========== [CHAOS-START] REQUEST RECEIVED ==========');
+  console.log('[CHAOS-START] Timestamp:', new Date().toISOString());
+  console.log('[CHAOS-START] Method:', req.method);
+  console.log('[CHAOS-START] URL:', req.url);
+  
   try {
+    console.log('[CHAOS-START] Step 1: Checking if chaos test already running...');
     if (chaosTestingProcess) {
+      console.log('[CHAOS-START] ❌ Chaos test already running, rejecting request');
       return res.json({
         success: false,
         message: 'Chaos testing is already running',
@@ -1225,20 +1323,60 @@ app.post('/chaos-testing/start', (req, res) => {
       });
     }
 
+    console.log('[CHAOS-START] Step 2: Parsing request parameters...');
     const { mode = 'validation', duration = 4, outputDir = 'chaos-test-results' } = req.body;
+    console.log(`[CHAOS-START] ✅ Parameters: mode=${mode}, duration=${duration}, outputDir=${outputDir}`);
 
-    console.log(`🔥 Starting chaos testing in ${mode} mode...`);
+    console.log(`[CHAOS-START] Step 3: Building script path...`);
+    const scriptPath = path.join(__dirname, '..', 'scripts', 'testing', 'chaos-test.py');
+    console.log(`[CHAOS-START] ✅ Script path resolved: ${scriptPath}`);
+    
+    // Check if script exists
+    const fs = require('fs');
+    if (!fs.existsSync(scriptPath)) {
+      const error = `Script not found at: ${scriptPath}`;
+      console.error(`[CHAOS-START] ❌ ${error}`);
+      throw new Error(error);
+    }
+    console.log('[CHAOS-START] ✅ Script file exists');
 
     const args = mode === 'validation' 
-      ? ['chaos-test.py', '--validation', '--output-dir', outputDir]
-      : ['chaos-test.py', '--duration', duration.toString(), '--output-dir', outputDir];
+      ? [scriptPath, '--validation', '--output-dir', outputDir]
+      : [scriptPath, '--duration', duration.toString(), '--output-dir', outputDir];
+    console.log(`[CHAOS-START] ✅ Command args: python -u ${args.join(' ')}`);
 
-    // Start the chaos testing process with UNBUFFERED output
-    chaosTestingProcess = spawn('python', ['-u', ...args], {
-      cwd: __dirname + '/..',
-      env: process.env
-    });
+    console.log('[CHAOS-START] Step 4: Creating log file for detached process...');
+    const logDir = path.join(__dirname, '..', outputDir);
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+      console.log(`[CHAOS-START] ✅ Created log directory: ${logDir}`);
+    }
+    
+    const logFile = path.join(logDir, `chaos-test-${Date.now()}.log`);
+    
+    // Open file descriptor synchronously - don't use streams for detached processes!
+    const logFd = fs.openSync(logFile, 'w');
+    console.log(`[CHAOS-START] ✅ Log file opened: ${logFile} (fd: ${logFd})`);
+    
+    console.log('[CHAOS-START] Step 5: Spawning Python process...');
+    const spawnOptions = {
+      cwd: path.join(__dirname, '..'),
+      env: process.env,
+      detached: true,
+      stdio: ['ignore', logFd, logFd]  // Use file descriptor instead of stream
+    };
+    console.log(`[CHAOS-START] Spawn options: cwd=${spawnOptions.cwd}, detached=${spawnOptions.detached}, logFd=${logFd}`);
+    
+    // Start the chaos testing process with UNBUFFERED output and DETACHED mode
+    chaosTestingProcess = spawn('python', ['-u', ...args], spawnOptions);
+    
+    console.log(`[CHAOS-START] ✅ Process spawned with PID: ${chaosTestingProcess.pid}`);
 
+    // Unref so Node.js doesn't wait for this process
+    chaosTestingProcess.unref();
+    console.log('[CHAOS-START] ✅ Process unref() called');
+
+    console.log('[CHAOS-START] Step 6: Initializing status object...');
     chaosTestingStatus = {
       running: true,
       startTime: new Date(),
@@ -1247,137 +1385,153 @@ app.post('/chaos-testing/start', (req, res) => {
       totalRequests: 0,
       lastOutput: '',
       outputLines: [],
-      pid: chaosTestingProcess.pid
+      pid: chaosTestingProcess.pid,
+      logFile: logFile
     };
+    console.log(`[CHAOS-START] ✅ Status initialized for PID ${chaosTestingStatus.pid}, log file: ${logFile}`);
 
-    // Capture output
-    chaosTestingProcess.stdout.on('data', (data) => {
-      const output = data.toString();
-      const lines = output.split('\n').filter(line => line.trim());
-      
-      console.log(`[Chaos Test Output] Received ${lines.length} lines`);
-      
-      lines.forEach(line => {
-        chaosTestingStatus.lastOutput = line;
-        
-        // Parse structured output from chaos test
-        const logEntry = {
-          timestamp: new Date().toISOString(),
-          message: line,
-          type: 'info'
-        };
-        
-        // Detect log types and extract metrics
-        if (line.includes('SUCCESS') || line.includes('✅')) {
-          logEntry.type = 'success';
-          chaosTestingStatus.successfulRequests = (chaosTestingStatus.successfulRequests || 0) + 1;
-        } else if (line.includes('FAILED') || line.includes('❌') || line.includes('ERROR')) {
-          logEntry.type = 'error';
-          chaosTestingStatus.failedRequests = (chaosTestingStatus.failedRequests || 0) + 1;
-        } else if (line.includes('WARNING') || line.includes('⚠️')) {
-          logEntry.type = 'warning';
-        } else if (line.includes('🔥') || line.includes('Chaos')) {
-          logEntry.type = 'chaos';
-        } else if (line.includes('Running') || line.includes('Starting')) {
-          logEntry.type = 'scenario';
-          // Extract scenario name
-          const scenarioMatch = line.match(/Running ([^.]+)/i) || line.match(/Starting ([^.]+)/i);
-          if (scenarioMatch) {
-            chaosTestingStatus.currentScenario = scenarioMatch[1];
-          }
-        }
-        
-        // Extract request count if present
-        const requestMatch = line.match(/Request #(\d+)/i);
-        if (requestMatch) {
-          chaosTestingStatus.totalRequests = parseInt(requestMatch[1]);
-        }
-        
-        // Add to output lines
-        chaosTestingStatus.outputLines.push(logEntry);
-        if (!chaosTestingStatus.detailedLogs) {
-          chaosTestingStatus.detailedLogs = [];
-        }
-        chaosTestingStatus.detailedLogs.push({
-          ...logEntry,
-          fullMessage: line
-        });
-        
-        console.log(`[Chaos Test] ${line}`);
-      });
-      
-      // Keep only last 100 lines
-      if (chaosTestingStatus.outputLines.length > 200) {
-        chaosTestingStatus.outputLines = chaosTestingStatus.outputLines.slice(-100);
-      }
-      if (chaosTestingStatus.detailedLogs && chaosTestingStatus.detailedLogs.length > 500) {
-        chaosTestingStatus.detailedLogs = chaosTestingStatus.detailedLogs.slice(-500);
-      }
-    });
-
-    chaosTestingProcess.stderr.on('data', (data) => {
-      const output = data.toString();
-      chaosTestingStatus.outputLines.push({
-        timestamp: new Date().toISOString(),
-        message: output,
-        error: true
-      });
-      
-      if (chaosTestingStatus.outputLines.length > 100) {
-        chaosTestingStatus.outputLines.shift();
-      }
-      
-      console.error(`[Chaos Test Error] ${output}`);
-    });
-
-    chaosTestingProcess.on('close', (code) => {
-      console.log(`🏁 Chaos testing process exited with code ${code}`);
-      chaosTestingStatus.running = false;
-      chaosTestingStatus.endTime = new Date();
-      chaosTestingProcess = null;
-    });
-
-    res.json({
+    console.log('[CHAOS-START] Step 7: Sending success response to client...');
+    // Immediately respond to client - don't wait for process output
+    const responseData = {
       success: true,
       message: `Chaos testing started in ${mode} mode`,
-      status: chaosTestingStatus
+      status: chaosTestingStatus,
+      pid: chaosTestingProcess.pid,
+      logFile: logFile
+    };
+
+    // Send response IMMEDIATELY
+    res.json(responseData);
+    console.log(`[CHAOS-START] ✅ Response sent to client (PID: ${chaosTestingProcess.pid}, log: ${logFile})`);
+
+    console.log('[CHAOS-START] Step 8: Process running in detached mode - output will be written to log file');
+    console.log('[CHAOS-START] Step 9: Setting up process completion listener...');
+    
+    // NO stdout/stderr listeners - output goes directly to log file
+    // This prevents hanging issues with detached processes
+    
+    // Set up close listener
+    chaosTestingProcess.on('close', (code, signal) => {
+      try {
+        console.log(`[CHAOS-CLOSE] Process ${chaosTestingStatus.pid} closed - Code: ${code}, Signal: ${signal}`);
+        
+        chaosTestingStatus.running = false;
+        chaosTestingStatus.endTime = new Date();
+        chaosTestingStatus.exitCode = code;
+        chaosTestingStatus.signal = signal;
+        
+        if (code === 0) {
+          console.log('[CHAOS-CLOSE] ✅ Process completed successfully');
+          chaosTestingStatus.lastOutput = 'Chaos testing completed successfully';
+        } else {
+          console.log(`[CHAOS-CLOSE] ⚠️  Process exited with code ${code}`);
+          chaosTestingStatus.lastOutput = `Process exited with code ${code}`;
+        }
+        
+        // Close file descriptor
+        try {
+          fs.closeSync(logFd);
+          console.log('[CHAOS-CLOSE] ✅ Log file closed');
+        } catch (fdError) {
+          console.error(`[CHAOS-CLOSE] ⚠️  Error closing log fd: ${fdError.message}`);
+        }
+        
+        chaosTestingProcess = null;
+        console.log('[CHAOS-CLOSE] ✅ Process cleaned up');
+      } catch (closeError) {
+        console.error(`[CHAOS-CLOSE] ❌ Error in close handler: ${closeError.message}`);
+      }
     });
+    
+    // Set up error listener
+    chaosTestingProcess.on('error', (error) => {
+      console.error(`[CHAOS-ERROR] ❌ Process error for PID ${chaosTestingStatus.pid}: ${error.message}`);
+      chaosTestingStatus.running = false;
+      chaosTestingStatus.error = error.message;
+      chaosTestingStatus.endTime = new Date();
+      
+      // Close file descriptor on error
+      try {
+        fs.closeSync(logFd);
+      } catch (fdError) {
+        console.error(`[CHAOS-ERROR] Error closing log fd: ${fdError.message}`);
+      }
+    });
+    
+    console.log('[CHAOS-START] ✅ Process listeners attached (close, error)');
+    console.log('[CHAOS-START] ========== CHAOS TEST STARTED SUCCESSFULLY ==========');
+
+    console.log('[CHAOS-START] ✅✅✅ All setup complete, chaos test running in background');
 
   } catch (error) {
-    console.error('Error starting chaos testing:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    console.error('[CHAOS-START] ❌❌❌ FATAL ERROR during chaos test start:');
+    console.error(`[CHAOS-START] Error message: ${error.message}`);
+    console.error(`[CHAOS-START] Error code: ${error.code}`);
+    console.error(`[CHAOS-START] Error stack: ${error.stack}`);
+    
+    // Clean up if process was created
+    if (chaosTestingProcess) {
+      console.log('[CHAOS-START] Cleaning up failed process...');
+      try {
+        chaosTestingProcess.kill();
+        chaosTestingProcess = null;
+      } catch (killError) {
+        console.error(`[CHAOS-START] Error killing process: ${killError.message}`);
+      }
+    }
+    
+    // Only send response if we haven't already
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        stack: error.stack,
+        code: error.code
+      });
+    } else {
+      console.error('[CHAOS-START] Response already sent, cannot send error response');
+    }
   }
 });
 
 // Stop chaos testing
 app.post('/chaos-testing/stop', (req, res) => {
+  console.log('[CHAOS-STOP] Received stop request');
+  
   try {
     if (!chaosTestingProcess) {
+      console.log('[CHAOS-STOP] No process running, nothing to stop');
       return res.json({
         success: false,
         message: 'No chaos testing process running'
       });
     }
 
-    console.log('🛑 Stopping chaos testing...');
+    console.log(`[CHAOS-STOP] Stopping chaos testing process PID: ${chaosTestingProcess.pid}`);
     
     // Send SIGINT to allow graceful shutdown
-    chaosTestingProcess.kill('SIGINT');
+    try {
+      chaosTestingProcess.kill('SIGINT');
+      console.log('[CHAOS-STOP] ✅ SIGINT sent to process');
+    } catch (killError) {
+      console.error(`[CHAOS-STOP] ❌ Error sending SIGINT: ${killError.message}`);
+      throw killError;
+    }
     
     chaosTestingStatus.running = false;
     chaosTestingStatus.endTime = new Date();
+    console.log('[CHAOS-STOP] ✅ Status updated');
 
     res.json({
       success: true,
       message: 'Chaos testing stopped',
       status: chaosTestingStatus
     });
+    console.log('[CHAOS-STOP] ✅ Response sent');
 
   } catch (error) {
-    console.error('Error stopping chaos testing:', error);
+    console.error('[CHAOS-STOP] ❌ Error stopping chaos testing:', error.message);
+    console.error('[CHAOS-STOP] Stack:', error.stack);
     res.status(500).json({
       success: false,
       error: error.message
@@ -1388,13 +1542,60 @@ app.post('/chaos-testing/stop', (req, res) => {
 // Get chaos testing status
 app.get('/chaos-testing/status', (req, res) => {
   try {
-    console.log(`📊 Chaos testing status requested. Running: ${chaosTestingStatus.running}, Output lines: ${chaosTestingStatus.outputLines.length}`);
+    const running = chaosTestingStatus.running;
+    const pid = chaosTestingStatus.pid || 'N/A';
+    const totalRequests = chaosTestingStatus.totalRequests || 0;
+    
+    // Read latest output from log file if it exists
+    let outputLines = [];
+    let lastOutput = chaosTestingStatus.lastOutput || '';
+    
+    if (chaosTestingStatus.logFile && fs.existsSync(chaosTestingStatus.logFile)) {
+      try {
+        const logContent = fs.readFileSync(chaosTestingStatus.logFile, 'utf8');
+        const rawLines = logContent.split('\n').filter(line => line.trim());
+        
+        // Convert to format expected by dashboard: {timestamp, message, error}
+        outputLines = rawLines.map(line => {
+          const isError = line.includes('ERROR') || line.includes('❌') || line.includes('FAILED');
+          return {
+            timestamp: new Date().toISOString(),
+            message: line,
+            error: isError
+          };
+        });
+        
+        // Get last non-empty line as lastOutput
+        if (rawLines.length > 0) {
+          lastOutput = rawLines[rawLines.length - 1];
+        }
+        
+        // Keep only last 100 lines for efficiency
+        if (outputLines.length > 100) {
+          outputLines = outputLines.slice(-100);
+        }
+      } catch (readError) {
+        console.error(`[CHAOS-STATUS] ⚠️  Could not read log file: ${readError.message}`);
+      }
+    }
+    
+    console.log(`[CHAOS-STATUS] Status check - Running: ${running}, PID: ${pid}, Requests: ${totalRequests}, Output lines: ${outputLines.length}`);
+    
+    // Update status with fresh data
+    const statusResponse = {
+      ...chaosTestingStatus,
+      outputLines: outputLines,
+      lastOutput: lastOutput,
+      totalRequests: totalRequests
+    };
+    
     res.json({
       success: true,
-      status: chaosTestingStatus
+      status: statusResponse
     });
   } catch (error) {
-    console.error('Error getting chaos testing status:', error);
+    console.error('[CHAOS-STATUS] ❌ Error getting chaos testing status:', error.message);
+    console.error('[CHAOS-STATUS] Stack:', error.stack);
     res.status(500).json({
       success: false,
       error: error.message
@@ -1492,8 +1693,8 @@ app.use((req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
+// Start server with error handling
+const server = app.listen(PORT, () => {
   console.log(`🚀 AI Resilience Monitor Backend running on http://localhost:${PORT}`);
   console.log(`📊 Available endpoints:`);
   console.log(`   GET  /test - Health check`);
@@ -1508,20 +1709,41 @@ app.listen(PORT, () => {
   console.log(`⚡ Circuit Breaker endpoints:`);
   console.log(`   GET  /circuit-breaker/status - Get circuit breaker status`);
   console.log(`   POST /circuit-breaker/reset - Reset circuit breakers`);
+}).on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use!`);
+    console.error('💡 Try one of these solutions:');
+    console.error('   1. Stop the process using port 3000:');
+    console.error('      Get-Process | Where-Object {$_.ProcessName -match "node"} | Stop-Process -Force');
+    console.error('   2. Use a different port:');
+    console.error('      $env:PORT=3001; node src/index.js');
+    console.error('   3. Find what\'s using the port:');
+    console.error('      Get-NetTCPConnection -LocalPort 3000');
+    process.exit(1);
+  } else {
+    console.error('❌ Server error:', error);
+    process.exit(1);
+  }
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('🛑 Received SIGTERM, shutting down gracefully...');
-  process.exit(0);
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
 });
 
 process.on('SIGINT', () => {
   console.log('🛑 Received SIGINT, shutting down gracefully...');
-  process.exit(0);
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
 });
 
-// Handle uncaught exceptions
+// Handle uncaught exceptions (but allow EADDRINUSE to exit)
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
   console.error('Stack:', error.stack);
@@ -1532,7 +1754,13 @@ process.on('uncaughtException', (error) => {
   if (error.errno) console.error('Error Number:', error.errno);
   if (error.syscall) console.error('System Call:', error.syscall);
   
-  // Don't exit - keep the server running
+  // Exit for critical errors like port conflicts
+  if (error.code === 'EADDRINUSE') {
+    console.error('❌ Critical error: Port already in use. Exiting...');
+    process.exit(1);
+  }
+  
+  // Don't exit for other errors - keep the server running
   console.log('⚠️  Server continuing despite error...');
   console.log('💓 Server still alive - monitoring will detect if crashed');
 });
