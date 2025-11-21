@@ -2,6 +2,7 @@
 """
 AI Resilience Monitor Dashboard
 A Flask web application serving a real-time dashboard for AI service monitoring.
+Automatically starts Node.js backend and Prometheus on startup.
 """
 import sys
 import os
@@ -10,13 +11,21 @@ from flask import Flask, render_template, jsonify, request
 import requests
 import logging
 from datetime import datetime
+import subprocess
+import atexit
+import time
+import socket
+import platform
 
 # Add backend directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 from database import get_datastore
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 # Initialize database
@@ -27,6 +36,12 @@ app = Flask(__name__)
 # Configuration
 BACKEND_URL = "http://localhost:3000"
 DEFAULT_PORT = 8080
+
+# Global process tracking
+monitoring_processes = {
+    'prometheus': None,
+    'backend': None
+}  # type: dict
 
 class DashboardAPI:
     """Handle all backend API interactions with error handling."""
@@ -384,8 +399,77 @@ def internal_error(error):
     logger.error(f"Internal server error: {error}")
     return jsonify({"error": "Internal server error"}), 500
 
+def is_port_open(host: str, port: int, timeout: float = 1.0) -> bool:
+    """Check if a TCP port is open."""
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+def start_prometheus(project_dir):
+    """Start Prometheus if not already running."""
+    if is_port_open('localhost', 9090):
+        logger.info('✅ Prometheus already running on port 9090')
+        return None
+    
+    prometheus_exe = os.path.join(project_dir, 'monitoring', 'prometheus', 'prometheus.exe')
+    prometheus_yml = os.path.join(project_dir, 'monitoring', 'prometheus', 'prometheus.yml')
+    
+    if not os.path.exists(prometheus_exe):
+        logger.warning('⚠️  Prometheus not installed. Run: .\\scripts\\setup-prometheus.ps1')
+        return None
+    
+    try:
+        logger.info('🚀 Starting Prometheus on http://localhost:9090...')
+        if platform.system() == 'Windows':
+            # Windows: CREATE_NO_WINDOW flag
+            process = subprocess.Popen(
+                [prometheus_exe, f'--config.file={prometheus_yml}', 
+                 f'--storage.tsdb.path={os.path.join(project_dir, "monitoring", "prometheus", "data")}'],
+                cwd=project_dir,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+        else:
+            process = subprocess.Popen(
+                [prometheus_exe, f'--config.file={prometheus_yml}',
+                 f'--storage.tsdb.path={os.path.join(project_dir, "monitoring", "prometheus", "data")}'],
+                cwd=project_dir,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+        
+        # Wait for Prometheus to start
+        time.sleep(3)
+        if is_port_open('localhost', 9090):
+            logger.info('✅ Prometheus started successfully on port 9090')
+            return process
+        else:
+            logger.warning('⚠️  Prometheus started but not responding on port 9090')
+            return process
+    except Exception as e:
+        logger.error(f'❌ Failed to start Prometheus: {e}')
+        return None
+
+def cleanup_processes():
+    """Clean up all monitoring processes on exit."""
+    logger.info('🧹 Cleaning up monitoring processes...')
+    for name, process in monitoring_processes.items():
+        if process and process.poll() is None:
+            try:
+                logger.info(f'Terminating {name} (pid={process.pid})...')
+                process.terminate()
+                time.sleep(1)
+                if process.poll() is None:
+                    logger.info(f'Killing {name} (pid={process.pid})...')
+                    process.kill()
+            except Exception as e:
+                logger.debug(f'Error cleaning up {name}: {e}')
+
 def main():
-    """Main function to run the Flask app."""
+    """Main function to run the Flask app with all monitoring services."""
     parser = argparse.ArgumentParser(description='AI Resilience Monitor Dashboard')
     parser.add_argument('--port', type=int, default=DEFAULT_PORT, 
                        help=f'Port to run the dashboard on (default: {DEFAULT_PORT})')
@@ -393,32 +477,36 @@ def main():
                        help='Host to run the dashboard on (default: localhost)')
     parser.add_argument('--debug', action='store_true',
                        help='Run in debug mode')
+    parser.add_argument('--no-monitoring', action='store_true',
+                       help='Skip starting Prometheus')
     
     args = parser.parse_args()
     
-    logger.info(f"🚀 Starting AI Resilience Dashboard on http://{args.host}:{args.port}")
-    logger.info(f"📊 Backend URL: {BACKEND_URL}")
-
-    # Helper: check if a TCP port is open
-    import socket, subprocess, atexit, os, time
-
-    def is_port_open(host: str, port: int, timeout: float = 1.0) -> bool:
-        try:
-            with socket.create_connection((host, port), timeout=timeout):
-                return True
-        except OSError:
-            return False
-
-    backend_process = None
-
-    # If backend not listening on expected port, try to start it from repo
+    logger.info('=' * 70)
+    logger.info('🤖 AI RESILIENCE MONITOR - FULL STACK STARTUP')
+    logger.info('=' * 70)
+    
+    project_dir = os.path.dirname(__file__)
+    
+    # Register cleanup handler
+    atexit.register(cleanup_processes)
+    
     try:
+        # Start Prometheus if not disabled
+        if not args.no_monitoring:
+            monitoring_processes['prometheus'] = start_prometheus(project_dir)
+        
+        logger.info(f"🚀 Starting AI Resilience Dashboard on http://{args.host}:{args.port}")
+        logger.info(f"📊 Backend URL: {BACKEND_URL}")
+
+        backend_process = None
+
+        # If backend not listening on expected port, try to start it from repo
         host = 'localhost'
         backend_port = 3000
-        project_dir = os.path.dirname(__file__)
 
         if not is_port_open(host, backend_port):
-            logger.info('Backend not detected on port %s — attempting to start Node.js backend...', backend_port)
+            logger.info('🔌 Backend not detected on port %s — attempting to start Node.js backend...', backend_port)
 
             node_cmd = [
                 'node',
@@ -426,71 +514,69 @@ def main():
             ]
 
             # Start Node.js backend as a child process
+            # CRITICAL: Do NOT use PIPE for stdout/stderr - it causes blocking when buffer fills!
+            # Let backend output go directly to console
             try:
                 backend_process = subprocess.Popen(
                     node_cmd,
                     cwd=project_dir,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    universal_newlines=True
+                    # Don't pipe - prevents pipe buffer deadlock
+                    stdout=None,  # Inherit parent's stdout
+                    stderr=None   # Inherit parent's stderr
                 )
+                monitoring_processes['backend'] = backend_process
 
                 logger.info('Started Node.js backend (pid=%s), waiting for it to listen on port %s...', backend_process.pid, backend_port)
 
                 # Wait up to 12 seconds for backend to come up
                 wait_until = time.time() + 12
+                backend_started = False
                 while time.time() < wait_until:
-                    if is_port_open(host, backend_port):
-                        logger.info('Backend is now listening on port %s', backend_port)
+                    # Check if process crashed
+                    if backend_process.poll() is not None:
+                        logger.error('❌ Backend process exited with code %s', backend_process.returncode)
+                        logger.error('💡 Backend failed to start. Check if port %s is already in use.', backend_port)
+                        monitoring_processes['backend'] = None
                         break
-                    # drain any available stdout lines to log
-                    if backend_process.stdout:
-                        try:
-                            line = backend_process.stdout.readline()
-                            if line:
-                                logger.info('[node] %s', line.rstrip())
-                        except Exception:
-                            pass
+                    
+                    if is_port_open(host, backend_port):
+                        logger.info('✅ Backend is now listening on port %s', backend_port)
+                        backend_started = True
+                        break
+                    
                     time.sleep(0.25)
-                else:
-                    logger.warning('Backend did not start within timeout; continuing to launch dashboard frontend only.')
+                
+                if not backend_started and backend_process.poll() is None:
+                    logger.warning('⚠️  Backend did not start within timeout; continuing to launch dashboard frontend only.')
 
             except FileNotFoundError:
-                logger.error('Node.js executable not found. Ensure Node is installed and available in PATH.')
+                logger.error('❌ Node.js executable not found. Ensure Node is installed and available in PATH.')
             except Exception as e:
-                logger.error('Failed to start Node.js backend: %s', e)
+                logger.error('❌ Failed to start Node.js backend: %s', e)
         else:
-            logger.info('Backend already running on port %s — will not start a new Node process.', backend_port)
+            logger.info('✅ Backend already running on port %s — will not start a new Node process.', backend_port)
 
-        # Ensure child backend_process is cleaned up when this process exits
-        def _cleanup_child():
-            nonlocal backend_process
-            try:
-                if backend_process and backend_process.poll() is None:
-                    logger.info('Terminating child Node.js backend (pid=%s)...', backend_process.pid)
-                    backend_process.terminate()
-                    time.sleep(1)
-                    if backend_process.poll() is None:
-                        logger.info('Killing child Node.js backend (pid=%s)...', backend_process.pid)
-                        backend_process.kill()
-            except Exception as ex:
-                logger.debug('Error while cleaning up backend process: %s', ex)
-
-        atexit.register(_cleanup_child)
+        # Print service status summary
+        logger.info('=' * 70)
+        logger.info('📊 SERVICE STATUS:')
+        logger.info('   • Main Dashboard:  http://localhost:%s', args.port)
+        logger.info('   • Backend API:     http://localhost:3000')
+        if not args.no_monitoring:
+            if monitoring_processes.get('prometheus'):
+                logger.info('   • Prometheus:      http://localhost:9090')
+        logger.info('=' * 70)
+        logger.info('Press Ctrl+C to stop all services')
+        logger.info('=' * 70)
 
         # Run Flask app (blocking). When it stops, cleanup will run via atexit.
         app.run(host=args.host, port=args.port, debug=args.debug)
 
     except KeyboardInterrupt:
+        logger.info('')
         logger.info('🛑 Dashboard stopped by user')
+        logger.info('🧹 Cleaning up all services...')
     except Exception as e:
         logger.error(f'❌ Failed to start dashboard: {e}')
-        # Attempt to clean up backend process if it was created
-        try:
-            if backend_process and backend_process.poll() is None:
-                backend_process.terminate()
-        except Exception:
-            pass
         sys.exit(1)
 
 if __name__ == '__main__':
