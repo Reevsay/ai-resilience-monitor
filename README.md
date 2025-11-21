@@ -3,13 +3,41 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-v18+-green.svg)](https://nodejs.org/)
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
+[![Prometheus](https://img.shields.io/badge/Prometheus-2.54+-orange.svg)](https://prometheus.io/)
+[![Grafana](https://img.shields.io/badge/Grafana-11.3+-orange.svg)](https://grafana.com/)
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)]()
 
-A comprehensive real-time monitoring dashboard for AI services featuring circuit breakers, chaos engineering, automated resilience testing, and advanced analytics. Built to ensure high availability and fault tolerance in AI-powered applications.
+A comprehensive real-time monitoring dashboard for AI services featuring circuit breakers, chaos engineering, automated resilience testing, and **professional Prometheus + Grafana monitoring stack**. Built to ensure high availability and fault tolerance in AI-powered applications.
+
+## 🚀 Quick Start
+
+```powershell
+# Clone the repository
+git clone <repository-url>
+cd ai-resilience-monitor
+
+# Install dependencies
+npm install
+pip install -r requirements.txt
+
+# Set up API keys (optional - works with simulations too)
+cp .env.example .env
+# Edit .env with your API keys
+
+# Start everything (auto-installs Prometheus + Grafana)
+.\START-MONITOR.ps1
+```
+
+**Access Points:**
+- 📊 Main Dashboard: http://localhost:8080
+- 📈 Grafana: http://localhost:3001 (admin/admin)
+- 🔍 Prometheus: http://localhost:9090
+- 🔌 Backend API: http://localhost:3000
 
 ## 📸 Screenshots
 
 > 🎯 **Dashboard v2.0.3** - Real-time monitoring with circuit breakers and chaos experiments
+> 📈 **Grafana Dashboards** - Professional time-series visualizations
 
 *(Add screenshots here)*
 
@@ -36,12 +64,21 @@ A comprehensive real-time monitoring dashboard for AI services featuring circuit
 - **Service Unavailability**: Complete service outage simulation
 - **Response Corruption**: Test data integrity handling
 
-### 📊 **Real-time Analytics**
+### 📊 **Professional Monitoring Stack** ⭐ NEW
+- **Prometheus Integration**: Industry-standard time-series metrics database
+- **Grafana Dashboards**: Professional visualizations and analytics
+- **Real-time Metrics**: 5-second scrape interval for immediate insights
+- **PromQL Queries**: Powerful query language for advanced analytics
+- **Auto-Installation**: One-command setup downloads and configures everything
+- **Export Ready**: High-quality PNG/PDF exports for research papers
+
+### 📈 **Real-time Analytics**
 - **Live Metrics**: Request count, success rate, latency tracking
 - **Interactive Charts**: Line charts with timestamps, bar charts, pie charts
 - **Performance Trends**: Historical data visualization with Chart.js
 - **Service Health**: Individual metrics per AI service
 - **Circuit Breaker States**: Visual state tracking
+- **Grafana Panels**: Request rate, latency percentiles (p50, p95), error rates
 
 ### 🤖 **Automation**
 - **Automated Testing**: Send requests at configurable intervals (2-10 seconds)
