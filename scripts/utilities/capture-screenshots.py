@@ -22,91 +22,136 @@ OUTPUT_DIR = Path(__file__).parent.parent / "research-paper" / "figures"
 SCREENSHOT_WIDTH = 1920
 SCREENSHOT_HEIGHT = 1080
 
-# Screenshot definitions
+# Screenshot definitions - Individual Components (Every component on the page)
 SCREENSHOTS = [
+    # Top Section
     {
-        "name": "01_dashboard_idle_state.png",
-        "description": "Full dashboard in idle state",
-        "action": "idle",
-        "wait": 2,
-        "full_page": True
+        "name": "01_top_metrics_cards.png",
+        "description": "Top Metrics Cards (Total Requests, Success Rate, Avg Response Time)",
+        "selector": ".stats-grid",
+        "wait": 2
+    },
+    
+    # AI Services Section
+    {
+        "name": "02_ai_service_status_section.png",
+        "description": "AI Service Status Section (All Services)",
+        "selector": ".services-section",
+        "wait": 2
+    },
+    
+    # Chaos Engineering Section
+    {
+        "name": "03_chaos_engineering_section.png",
+        "description": "Chaos Engineering Section (Complete)",
+        "selector": ".chaos-section",
+        "wait": 2
     },
     {
-        "name": "02_system_status_normal.png",
-        "description": "System status panel - normal operation",
-        "action": "focus_element",
-        "selector": ".system-status-panel",
-        "wait": 1,
-        "full_page": False
+        "name": "04_chaos_controls.png",
+        "description": "Chaos Engineering Controls Panel",
+        "selector": ".chaos-controls",
+        "wait": 2
     },
     {
-        "name": "03_chaos_config_panel.png",
-        "description": "Chaos testing configuration",
-        "action": "open_chaos_config",
-        "wait": 1,
-        "full_page": False
+        "name": "05_active_experiments.png",
+        "description": "Active Chaos Experiments List",
+        "selector": ".active-experiments",
+        "wait": 2
+    },
+    
+    # Analytics Section
+    {
+        "name": "06_analytics_section.png",
+        "description": "Complete Analytics & Insights Section",
+        "selector": ".analytics-section",
+        "wait": 2
     },
     {
-        "name": "04_chaos_testing_started.png",
-        "description": "Chaos testing - just started",
-        "action": "start_chaos_test",
-        "wait": 5,
-        "full_page": True
+        "name": "07_analytics_controls.png",
+        "description": "Analytics Controls (Auto Requests, Target Service, Interval)",
+        "selector": ".analytics-controls",
+        "wait": 2
     },
     {
-        "name": "05_chaos_terminal_output.png",
-        "description": "Chaos terminal output - active",
-        "action": "focus_element",
-        "selector": ".chaos-terminal",
-        "wait": 10,
-        "full_page": False
+        "name": "08_real_time_performance_chart.png",
+        "description": "Real-Time Performance Chart",
+        "selector": "#performanceChart",
+        "wait": 3
     },
     {
-        "name": "06_response_time_chart_active.png",
-        "description": "Response time chart with data",
-        "action": "focus_element",
-        "selector": ".response-time-chart",
-        "wait": 15,
-        "full_page": False
+        "name": "09_service_response_time_trends.png",
+        "description": "Service Response Time Trends Chart",
+        "selector": "#latencyChart",
+        "wait": 3
     },
     {
-        "name": "07_success_rate_chart.png",
-        "description": "Success rate chart showing degradation",
-        "action": "focus_element",
-        "selector": ".success-rate-chart",
-        "wait": 20,
-        "full_page": False
+        "name": "10_service_performance_leaderboard.png",
+        "description": "Service Performance Leaderboard",
+        "selector": "#serviceLeaderboard",
+        "wait": 2
     },
     {
-        "name": "08_circuit_breaker_closed.png",
-        "description": "Circuit breaker - CLOSED state",
-        "action": "focus_element",
-        "selector": ".circuit-breaker-panel",
-        "wait": 1,
-        "full_page": False
+        "name": "11_circuit_breaker_status.png",
+        "description": "Circuit Breaker Status Panel",
+        "selector": "#circuitBreakerStatus",
+        "wait": 2
     },
     {
-        "name": "09_circuit_breaker_open.png",
-        "description": "Circuit breaker - OPEN state",
-        "action": "wait_for_circuit_open",
-        "wait": 30,
-        "full_page": False
+        "name": "12_key_insights.png",
+        "description": "Key Insights Summary",
+        "selector": ".metrics-summary",
+        "wait": 2
     },
     {
-        "name": "11_realtime_metrics_high_load.png",
-        "description": "Real-time metrics under high load",
-        "action": "focus_element",
-        "selector": ".realtime-metrics-panel",
-        "wait": 25,
-        "full_page": False
+        "name": "13_advanced_analytics.png",
+        "description": "Advanced Analytics Section",
+        "selector": ".analytics-card.full-width:nth-of-type(1)",
+        "wait": 2
     },
     {
-        "name": "12_system_status_under_stress.png",
-        "description": "System status during chaos testing",
-        "action": "focus_element",
-        "selector": ".system-status-panel",
-        "wait": 30,
-        "full_page": False
+        "name": "14_failure_recovery_analysis.png",
+        "description": "Failure Recovery Analysis",
+        "selector": ".recovery-section",
+        "wait": 2
+    },
+    {
+        "name": "15_error_patterns_leaderboard.png",
+        "description": "Error Patterns Leaderboard",
+        "selector": ".error-patterns-section",
+        "wait": 2
+    },
+    {
+        "name": "16_performance_trends_analysis.png",
+        "description": "Performance Trends Analysis",
+        "selector": ".trends-section",
+        "wait": 2
+    },
+    {
+        "name": "17_historical_request_log.png",
+        "description": "Historical Request Log Table",
+        "selector": "#historyTable",
+        "wait": 2
+    },
+    
+    # Long-Term Chaos Testing Section
+    {
+        "name": "18_chaos_testing_section.png",
+        "description": "Long-Term Chaos Testing Section",
+        "selector": ".chaos-testing-section",
+        "wait": 2
+    },
+    {
+        "name": "19_chaos_test_status.png",
+        "description": "Chaos Test Status Card",
+        "selector": ".testing-status-card",
+        "wait": 2
+    },
+    {
+        "name": "20_chaos_testing_actions.png",
+        "description": "Chaos Testing Action Buttons",
+        "selector": ".testing-actions",
+        "wait": 2
     },
 ]
 
@@ -197,6 +242,32 @@ class DashboardScreenshotter:
             print(f"  ✗ Error saving {filename}: {e}")
             return False
     
+    def take_element_screenshot(self, selector, filename):
+        """Take a screenshot of a specific element only"""
+        filepath = self.output_dir / filename
+        
+        try:
+            # Find the element
+            element = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+            )
+            
+            # Scroll element into view
+            self.driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", element)
+            time.sleep(1)
+            
+            # Take screenshot of just this element
+            element.screenshot(str(filepath))
+            
+            print(f"  ✓ Saved: {filename}")
+            return True
+        except Exception as e:
+            print(f"  ⚠ Could not capture {selector}: {e}")
+            print(f"  ℹ Taking full page screenshot instead...")
+            # Fallback to full page screenshot
+            return self.take_screenshot(filename, full_page=False)
+            return False
+    
     def focus_element(self, selector):
         """Scroll to and focus on a specific element"""
         try:
@@ -258,7 +329,7 @@ class DashboardScreenshotter:
     def capture_all(self):
         """Capture all screenshots according to the plan"""
         print("\n" + "="*70)
-        print("AUTOMATED DASHBOARD SCREENSHOT CAPTURE")
+        print("INDIVIDUAL COMPONENT SCREENSHOT CAPTURE")
         print("="*70)
         
         # Check services
@@ -274,47 +345,21 @@ class DashboardScreenshotter:
         self.driver.get(DASHBOARD_URL)
         time.sleep(3)
         
-        print("\nCapturing screenshots...")
+        print("\nCapturing individual component screenshots...")
         print("-"*70)
-        
-        chaos_started = False
         
         for i, screenshot in enumerate(SCREENSHOTS, 1):
             print(f"\n[{i}/{len(SCREENSHOTS)}] {screenshot['description']}")
             
-            # Perform action
-            action = screenshot.get('action', 'idle')
+            # Wait before capturing
+            time.sleep(screenshot.get('wait', 1))
             
-            if action == 'idle':
-                time.sleep(screenshot['wait'])
-            
-            elif action == 'focus_element':
-                selector = screenshot.get('selector')
-                if selector:
-                    self.focus_element(selector)
-                time.sleep(screenshot['wait'])
-            
-            elif action == 'open_chaos_config':
-                # Try to open chaos config panel
-                try:
-                    config_btn = self.driver.find_element(By.ID, "chaosConfigBtn")
-                    config_btn.click()
-                    time.sleep(screenshot['wait'])
-                except:
-                    print("  ⚠ Chaos config button not found, using default view")
-            
-            elif action == 'start_chaos_test':
-                if not chaos_started:
-                    self.start_chaos_test()
-                    chaos_started = True
-                time.sleep(screenshot['wait'])
-            
-            elif action == 'wait_for_circuit_open':
-                self.wait_for_circuit_open()
-                self.focus_element(screenshot.get('selector', '.circuit-breaker-panel'))
-            
-            # Take screenshot
-            self.take_screenshot(screenshot['name'], screenshot.get('full_page', False))
+            # Capture element screenshot
+            selector = screenshot.get('selector')
+            if selector:
+                self.take_element_screenshot(selector, screenshot['name'])
+            else:
+                self.take_screenshot(screenshot['name'], full_page=False)
             
             # Small delay between screenshots
             time.sleep(0.5)
@@ -366,11 +411,11 @@ def main():
 if __name__ == '__main__':
     print("""
 ╔══════════════════════════════════════════════════════════════╗
-║     📸 DASHBOARD SCREENSHOT AUTOMATION SCRIPT 📸            ║
+║     📸 COMPONENT SCREENSHOT AUTOMATION SCRIPT 📸           ║
 ╚══════════════════════════════════════════════════════════════╝
 
-This script will automatically capture all dashboard states
-for your research paper.
+This script will capture individual dashboard components
+as separate screenshots with proper naming.
 
 Prerequisites:
   ✓ Dashboard running on http://localhost:8080
@@ -378,12 +423,20 @@ Prerequisites:
   ✓ Chrome browser installed
   ✓ ChromeDriver installed (pip install webdriver-manager)
 
-The script will:
-  1. Check if services are running
-  2. Open Chrome browser
-  3. Capture 12+ screenshots automatically
-  4. Save to research-paper/figures/
-  5. Close browser when done
+The script will capture:
+  • Top Metrics Cards
+  • AI Service Status
+  • Chaos Engineering Panel
+  • Service Performance Leaderboard
+  • Real-Time Performance Chart
+  • Service Response Time Trends
+  • Circuit Breaker Status
+  • Error Rate Monitoring
+  • System Health Overview
+  • And more...
+
+Each component will be saved with its actual size and named
+appropriately for easy identification.
 
 Press Ctrl+C to cancel at any time.
 """)

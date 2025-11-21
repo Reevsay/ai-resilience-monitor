@@ -1,2 +1,0 @@
-Timestamp,Experiment_ID,Chaos_Type,Intensity,Service,Duration_Sec,Total_Requests,Successful_Requests,Failed_Requests,Avg_Latency_Ms,Min_Latency_Ms,Max_Latency_Ms,Success_Rate_%,Circuit_Breaker_Trips,Recovery_Time_Sec
-2025-11-09T21:28:25.940500,1,latency,100,gemini,300,10,10,0,2071.70,1118,2843,100.00,0,180.08
