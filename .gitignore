@@ -40,7 +40,9 @@ Thumbs.db
 *.log
 *.tmp
 *.temp
-logs/
+*.pid
+logs/*.log
+!logs/README.md
 monitor.log
 
 # Build outputs and distribution
@@ -55,7 +57,26 @@ htmlcov/
 # Database files (contains monitoring data)
 data/monitoring.db
 data/monitoring.db-journal
+data/monitoring.db-wal
+data/monitoring.db-shm
 data/export_*.json
+
+# Documentation - LaTeX source files (keep compiled PDFs only)
+documentation/*.tex
+documentation/*.aux
+documentation/*.log
+documentation/compile-flowcharts.ps1
+documentation/compile-flowcharts.sh
+
+# Test results - Keep only sample files
+chaos-test-results/*.log
+chaos-test-results/*.csv
+chaos-test-results/*.txt
+!chaos-test-results/sample_*.txt
+!chaos-test-results/sample_*.csv
+
+# Prometheus and Grafana (auto-installed by setup script)
+monitoring/
 
 # Keep the data directory structure
 !data/README.md
