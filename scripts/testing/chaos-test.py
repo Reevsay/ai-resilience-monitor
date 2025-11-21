@@ -33,23 +33,23 @@ FRONTEND_URL = "http://localhost:8080"
 CHAOS_TYPES = {
     'latency': {
         'name': 'Network Latency',
-        'intensities': [100, 500, 1000, 2000, 5000],  # milliseconds
+        'intensities': [100, 500, 1000, 5000],  # milliseconds
         'description': 'Simulates slow network conditions'
     },
-    'error': {
-        'name': 'Error Injection',
+    'failure': {
+        'name': 'Service Failure',
         'intensities': [25, 50, 75, 100],  # percentage
         'description': 'Simulates random errors and failures'
     },
     'timeout': {
         'name': 'Timeout Simulation',
-        'intensities': [1000, 3000, 5000, 10000],  # milliseconds
+        'intensities': [2000, 5000, 8000, 15000],  # milliseconds
         'description': 'Simulates request timeouts'
     },
-    'throttle': {
-        'name': 'Rate Limiting',
-        'intensities': [50, 75, 90, 100],  # percentage reduction
-        'description': 'Simulates API rate limiting'
+    'intermittent': {
+        'name': 'Intermittent Failures',
+        'intensities': [25, 50, 75, 100],  # percentage
+        'description': 'Simulates on-and-off service availability'
     }
 }
 
@@ -184,7 +184,7 @@ class ChaosTestRunner:
                 'duration': duration
             }
             
-            response = requests.post(f"{BACKEND_URL}/chaos/inject", json=payload, timeout=10)
+            response = requests.post(f"{BACKEND_URL}/chaos/inject", json=payload, timeout=15)
             
             if response.status_code == 200:
                 data = response.json()
@@ -192,10 +192,18 @@ class ChaosTestRunner:
                         f"(intensity: {intensity}, duration: {duration}s)", level='CHAOS')
                 return True
             else:
-                self.log(f"Failed to inject chaos: {response.text}", level='ERROR')
+                self.log(f"Failed to inject chaos: {response.status_code} - {response.text}", level='ERROR')
                 return False
+        except requests.exceptions.Timeout:
+            self.log(f"❌ Timeout while injecting chaos to {service}", level='ERROR')
+            return False
+        except requests.exceptions.ConnectionError:
+            self.log(f"❌ Backend connection error - is the backend running?", level='ERROR')
+            return False
         except Exception as e:
             self.log(f"Error injecting chaos: {e}", level='ERROR')
+            import traceback
+            traceback.print_exc()
             return False
     
     def stop_chaos(self, service):
@@ -276,195 +284,207 @@ class ChaosTestRunner:
     
     def run_experiment(self, experiment_id, chaos_type, intensity, service):
         """Run a single chaos experiment"""
-        print(f"\n{'='*70}", flush=True)
-        print(f"🧪 EXPERIMENT #{experiment_id} - {CHAOS_TYPES[chaos_type]['name']}", flush=True)
-        print(f"{'='*70}", flush=True)
-        print(f"   📍 Service: {service.upper()}", flush=True)
-        print(f"   🔥 Chaos Type: {chaos_type.upper()}", flush=True)
-        print(f"   💥 Intensity: {intensity}", flush=True)
-        print(f"   ⏱️  Duration: {self.chaos_duration}s", flush=True)
-        print(f"{'='*70}\n", flush=True)
-        
-        # Inject chaos
-        print(f"🔥 Injecting chaos: {chaos_type} @ intensity {intensity}...", flush=True)
-        if not self.inject_chaos(service, chaos_type, intensity, self.chaos_duration):
-            print(f"❌ Failed to inject chaos. Skipping experiment.", flush=True)
-            return
-        
-        print(f"✅ Chaos injected successfully! Starting requests...\n", flush=True)
-        
-        self.total_chaos_experiments += 1
-        experiment_start = time.time()
-        
-        # Collect data during chaos
-        requests_data = []
-        circuit_breaker_trips = 0
-        previous_cb_state = None
-        
-        # Run requests during chaos period
-        chaos_end_time = time.time() + self.chaos_duration
-        request_count = 0
-        
-        print(f"📊 Running requests under chaos conditions...", flush=True)
-        print(f"", flush=True)
-        
-        while time.time() < chaos_end_time and self.running:
-            prompt = random.choice(TEST_PROMPTS)
+        try:
+            print(f"\n{'='*70}", flush=True)
+            print(f"🧪 EXPERIMENT #{experiment_id} - {CHAOS_TYPES[chaos_type]['name']}", flush=True)
+            print(f"{'='*70}", flush=True)
+            print(f"   📍 Service: {service.upper()}", flush=True)
+            print(f"   🔥 Chaos Type: {chaos_type.upper()}", flush=True)
+            print(f"   💥 Intensity: {intensity}", flush=True)
+            print(f"   ⏱️  Duration: {self.chaos_duration}s", flush=True)
+            print(f"{'='*70}\n", flush=True)
             
-            # Send request
-            result = self.send_ai_request(service, prompt)
-            self.total_requests += 1
-            request_count += 1
+            # Inject chaos
+            print(f"🔥 Injecting chaos: {chaos_type} @ intensity {intensity}...", flush=True)
+            if not self.inject_chaos(service, chaos_type, intensity, self.chaos_duration):
+                print(f"❌ Failed to inject chaos. Skipping experiment.", flush=True)
+                return
             
-            # Get circuit breaker status
-            cb_status = self.get_circuit_breaker_status()
-            current_cb_state = cb_status.get(service, {}).get('state', 'UNKNOWN')
+            print(f"✅ Chaos injected successfully! Starting requests...\n", flush=True)
             
-            # Detect circuit breaker trips
-            if previous_cb_state == 'CLOSED' and current_cb_state == 'OPEN':
-                circuit_breaker_trips += 1
-                self.log(f"⚡ Circuit breaker OPENED for {service.upper()}", level='WARNING')
+            self.total_chaos_experiments += 1
+            experiment_start = time.time()
             
-            previous_cb_state = current_cb_state
+            # Collect data during chaos
+            requests_data = []
+            circuit_breaker_trips = 0
+            previous_cb_state = None
             
-            # Log request
-            request_data = {
+            # Run requests during chaos period
+            chaos_end_time = time.time() + self.chaos_duration
+            request_count = 0
+            
+            print(f"📊 Running requests under chaos conditions...", flush=True)
+            print(f"", flush=True)
+            
+            while time.time() < chaos_end_time and self.running:
+                prompt = random.choice(TEST_PROMPTS)
+                
+                # Send request
+                result = self.send_ai_request(service, prompt)
+                self.total_requests += 1
+                request_count += 1
+                
+                # Get circuit breaker status
+                cb_status = self.get_circuit_breaker_status()
+                current_cb_state = cb_status.get(service, {}).get('state', 'UNKNOWN')
+                
+                # Detect circuit breaker trips
+                if previous_cb_state == 'CLOSED' and current_cb_state == 'OPEN':
+                    circuit_breaker_trips += 1
+                    self.log(f"⚡ Circuit breaker OPENED for {service.upper()}", level='WARNING')
+                
+                previous_cb_state = current_cb_state
+                
+                # Log request
+                request_data = {
+                    'timestamp': datetime.now().isoformat(),
+                    'experiment_id': experiment_id,
+                    'service': service,
+                    'chaos_type': chaos_type,
+                    'chaos_active': True,
+                    'success': result['success'],
+                    'latency': result['latency'],
+                    'error_type': result['error_type'],
+                    'circuit_breaker_state': current_cb_state,
+                    'response_size': result['response_size']
+                }
+                
+                requests_data.append(request_data)
+                
+                # Write to CSV
+                with open(self.request_log_file, 'a', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerow([
+                        request_data['timestamp'],
+                        request_data['experiment_id'],
+                        request_data['service'],
+                        request_data['chaos_type'],
+                        request_data['chaos_active'],
+                        request_data['success'],
+                        request_data['latency'],
+                        request_data['error_type'],
+                        request_data['circuit_breaker_state'],
+                        request_data['response_size']
+                    ])
+                
+                # Status update
+                if request_count % 5 == 0:
+                    success_count = sum(1 for r in requests_data if r['success'])
+                    success_rate = (success_count / len(requests_data)) * 100
+                    self.log(f"   Progress: {request_count} requests, "
+                            f"{success_rate:.1f}% success rate", level='INFO')
+                
+                # Calculate dynamic delay based on actual request time and target rate
+                # Target: requests_per_cycle requests over chaos_duration seconds
+                target_delay = max(self.min_request_delay, self.chaos_duration / self.requests_per_cycle)
+                actual_request_time = time.time() - experiment_start
+                expected_time = request_count * target_delay
+                
+                # Adjust delay to stay on track
+                if actual_request_time < expected_time:
+                    delay = expected_time - actual_request_time
+                    time.sleep(min(delay, target_delay))
+                else:
+                    # We're behind schedule, use minimum delay
+                    time.sleep(self.min_request_delay)
+            
+            # Stop chaos
+            self.stop_chaos(service)
+            print(f"🛑 Chaos stopped. Monitoring recovery...\n", flush=True)
+            
+            # Wait for recovery
+            print(f"⏳ Recovery Period: Waiting {self.normal_duration}s for service to stabilize...", flush=True)
+            recovery_start = time.time()
+            
+            # Monitor recovery
+            recovery_checks = 0
+            while time.time() < recovery_start + self.normal_duration and self.running:
+                time.sleep(5)
+                recovery_checks += 1
+                remaining = int((recovery_start + self.normal_duration) - time.time())
+                print(f"   Recovery check #{recovery_checks} | {remaining}s remaining", flush=True)
+            
+            recovery_time = time.time() - recovery_start
+            print(f"✅ Recovery period complete!\n", flush=True)
+            
+            # Calculate statistics
+            successful_requests = sum(1 for r in requests_data if r['success'])
+            failed_requests = len(requests_data) - successful_requests
+            success_rate = (successful_requests / len(requests_data) * 100) if requests_data else 0
+            
+            latencies = [r['latency'] for r in requests_data if r['success']]
+            avg_latency = sum(latencies) / len(latencies) if latencies else 0
+            min_latency = min(latencies) if latencies else 0
+            max_latency = max(latencies) if latencies else 0
+            
+            # Log experiment results
+            experiment_result = {
                 'timestamp': datetime.now().isoformat(),
                 'experiment_id': experiment_id,
-                'service': service,
                 'chaos_type': chaos_type,
-                'chaos_active': True,
-                'success': result['success'],
-                'latency': result['latency'],
-                'error_type': result['error_type'],
-                'circuit_breaker_state': current_cb_state,
-                'response_size': result['response_size']
+                'intensity': intensity,
+                'service': service,
+                'duration': self.chaos_duration,
+                'total_requests': len(requests_data),
+                'successful_requests': successful_requests,
+                'failed_requests': failed_requests,
+                'avg_latency': avg_latency,
+                'min_latency': min_latency,
+                'max_latency': max_latency,
+                'success_rate': success_rate,
+                'circuit_breaker_trips': circuit_breaker_trips,
+                'recovery_time': recovery_time
             }
             
-            requests_data.append(request_data)
+            self.experiment_results.append(experiment_result)
             
-            # Write to CSV
-            with open(self.request_log_file, 'a', newline='') as f:
+            # Write to experiment log
+            with open(self.experiment_log_file, 'a', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow([
-                    request_data['timestamp'],
-                    request_data['experiment_id'],
-                    request_data['service'],
-                    request_data['chaos_type'],
-                    request_data['chaos_active'],
-                    request_data['success'],
-                    request_data['latency'],
-                    request_data['error_type'],
-                    request_data['circuit_breaker_state'],
-                    request_data['response_size']
+                    experiment_result['timestamp'],
+                    experiment_result['experiment_id'],
+                    experiment_result['chaos_type'],
+                    experiment_result['intensity'],
+                    experiment_result['service'],
+                    experiment_result['duration'],
+                    experiment_result['total_requests'],
+                    experiment_result['successful_requests'],
+                    experiment_result['failed_requests'],
+                    f"{experiment_result['avg_latency']:.2f}",
+                    experiment_result['min_latency'],
+                    experiment_result['max_latency'],
+                    f"{experiment_result['success_rate']:.2f}",
+                    experiment_result['circuit_breaker_trips'],
+                    f"{experiment_result['recovery_time']:.2f}"
                 ])
             
-            # Status update
-            if request_count % 5 == 0:
-                success_count = sum(1 for r in requests_data if r['success'])
-                success_rate = (success_count / len(requests_data)) * 100
-                self.log(f"   Progress: {request_count} requests, "
-                        f"{success_rate:.1f}% success rate", level='INFO')
+            # Print detailed summary
+            print(f"\n{'='*70}", flush=True)
+            print(f"📊 EXPERIMENT #{experiment_id} RESULTS", flush=True)
+            print(f"{'='*70}", flush=True)
+            print(f"   📝 Service: {service.upper()}", flush=True)
+            print(f"   🔥 Chaos: {chaos_type.upper()} @ {intensity}", flush=True)
+            print(f"   📈 Total Requests: {len(requests_data)}", flush=True)
+            print(f"   ✅ Successful: {successful_requests} ({success_rate:.1f}%)", flush=True)
+            print(f"   ❌ Failed: {failed_requests} ({100-success_rate:.1f}%)", flush=True)
+            print(f"   ⚡ Avg Latency: {avg_latency:.0f}ms", flush=True)
+            print(f"   📊 Latency Range: {min_latency}ms - {max_latency}ms", flush=True)
+            print(f"   🔌 Circuit Breaker Trips: {circuit_breaker_trips}", flush=True)
+            self.log(f"   Recovery Time: {recovery_time:.1f}s", level='INFO')
+            self.log(f"{'='*60}\n", level='INFO')
             
-            # Calculate dynamic delay based on actual request time and target rate
-            # Target: requests_per_cycle requests over chaos_duration seconds
-            target_delay = max(self.min_request_delay, self.chaos_duration / self.requests_per_cycle)
-            actual_request_time = time.time() - experiment_start
-            expected_time = request_count * target_delay
-            
-            # Adjust delay to stay on track
-            if actual_request_time < expected_time:
-                delay = expected_time - actual_request_time
-                time.sleep(min(delay, target_delay))
-            else:
-                # We're behind schedule, use minimum delay
-                time.sleep(self.min_request_delay)
-        
-        # Stop chaos
-        self.stop_chaos(service)
-        print(f"🛑 Chaos stopped. Monitoring recovery...\n", flush=True)
-        
-        # Wait for recovery
-        print(f"⏳ Recovery Period: Waiting {self.normal_duration}s for service to stabilize...", flush=True)
-        recovery_start = time.time()
-        
-        # Monitor recovery
-        recovery_checks = 0
-        while time.time() < recovery_start + self.normal_duration and self.running:
-            time.sleep(5)
-            recovery_checks += 1
-            remaining = int((recovery_start + self.normal_duration) - time.time())
-            print(f"   Recovery check #{recovery_checks} | {remaining}s remaining", flush=True)
-        
-        recovery_time = time.time() - recovery_start
-        print(f"✅ Recovery period complete!\n", flush=True)
-        
-        # Calculate statistics
-        successful_requests = sum(1 for r in requests_data if r['success'])
-        failed_requests = len(requests_data) - successful_requests
-        success_rate = (successful_requests / len(requests_data) * 100) if requests_data else 0
-        
-        latencies = [r['latency'] for r in requests_data if r['success']]
-        avg_latency = sum(latencies) / len(latencies) if latencies else 0
-        min_latency = min(latencies) if latencies else 0
-        max_latency = max(latencies) if latencies else 0
-        
-        # Log experiment results
-        experiment_result = {
-            'timestamp': datetime.now().isoformat(),
-            'experiment_id': experiment_id,
-            'chaos_type': chaos_type,
-            'intensity': intensity,
-            'service': service,
-            'duration': self.chaos_duration,
-            'total_requests': len(requests_data),
-            'successful_requests': successful_requests,
-            'failed_requests': failed_requests,
-            'avg_latency': avg_latency,
-            'min_latency': min_latency,
-            'max_latency': max_latency,
-            'success_rate': success_rate,
-            'circuit_breaker_trips': circuit_breaker_trips,
-            'recovery_time': recovery_time
-        }
-        
-        self.experiment_results.append(experiment_result)
-        
-        # Write to experiment log
-        with open(self.experiment_log_file, 'a', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                experiment_result['timestamp'],
-                experiment_result['experiment_id'],
-                experiment_result['chaos_type'],
-                experiment_result['intensity'],
-                experiment_result['service'],
-                experiment_result['duration'],
-                experiment_result['total_requests'],
-                experiment_result['successful_requests'],
-                experiment_result['failed_requests'],
-                f"{experiment_result['avg_latency']:.2f}",
-                experiment_result['min_latency'],
-                experiment_result['max_latency'],
-                f"{experiment_result['success_rate']:.2f}",
-                experiment_result['circuit_breaker_trips'],
-                f"{experiment_result['recovery_time']:.2f}"
-            ])
-        
-        # Print detailed summary
-        print(f"\n{'='*70}", flush=True)
-        print(f"📊 EXPERIMENT #{experiment_id} RESULTS", flush=True)
-        print(f"{'='*70}", flush=True)
-        print(f"   📝 Service: {service.upper()}", flush=True)
-        print(f"   🔥 Chaos: {chaos_type.upper()} @ {intensity}", flush=True)
-        print(f"   📈 Total Requests: {len(requests_data)}", flush=True)
-        print(f"   ✅ Successful: {successful_requests} ({success_rate:.1f}%)", flush=True)
-        print(f"   ❌ Failed: {failed_requests} ({100-success_rate:.1f}%)", flush=True)
-        print(f"   ⚡ Avg Latency: {avg_latency:.0f}ms", flush=True)
-        print(f"   📊 Latency Range: {min_latency}ms - {max_latency}ms", flush=True)
-        print(f"   🔌 Circuit Breaker Trips: {circuit_breaker_trips}", flush=True)
-        self.log(f"   Recovery Time: {recovery_time:.1f}s", level='INFO')
-        self.log(f"{'='*60}\n", level='INFO')
+        except KeyboardInterrupt:
+            print("\n⚠️  Experiment interrupted by user", flush=True)
+            self.stop_chaos(service)
+            raise
+        except Exception as e:
+            print(f"\n❌ Experiment failed with error: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            self.stop_chaos(service)
+            # Don't raise - continue with next experiment
     
     def run_load_test_normal(self, duration=300):
         """Test Scenario 1: Normal Load - 1 request every 5 seconds"""
@@ -864,58 +884,104 @@ class ChaosTestRunner:
     
     def run(self):
         """Main test execution loop"""
-        self.log("="*80, level='INFO')
-        self.log("🔥 AI RESILIENCE CHAOS TESTING STARTED", level='INFO')
-        self.log("="*80, level='INFO')
-        self.log(f"Duration: {self.duration_hours} hours", level='INFO')
-        self.log(f"Requests per cycle: {self.requests_per_cycle}", level='INFO')
-        self.log(f"Chaos duration: {self.chaos_duration}s", level='INFO')
-        self.log(f"Normal period: {self.normal_duration}s", level='INFO')
-        self.log(f"Output directory: {self.output_dir}", level='INFO')
-        self.log("="*80 + "\n", level='INFO')
-        
-        # Check backend health
-        if not self.check_backend_health():
-            self.log("❌ Backend is not running! Please start the backend first.", level='ERROR')
-            return
-        
-        start_time = time.time()
-        end_time = start_time + (self.duration_hours * 3600)
-        
-        experiment_id = 1
-        
-        # Main testing loop
-        while time.time() < end_time and self.running:
-            # Round-robin through all chaos types
-            for chaos_type in CHAOS_TYPES.keys():
-                if not self.running or time.time() >= end_time:
-                    break
+        try:
+            self.log("="*80, level='INFO')
+            self.log("🔥 AI RESILIENCE CHAOS TESTING STARTED", level='INFO')
+            self.log("="*80, level='INFO')
+            self.log(f"Duration: {self.duration_hours} hours", level='INFO')
+            self.log(f"Requests per cycle: {self.requests_per_cycle}", level='INFO')
+            self.log(f"Chaos duration: {self.chaos_duration}s", level='INFO')
+            self.log(f"Normal period: {self.normal_duration}s", level='INFO')
+            self.log(f"Output directory: {self.output_dir}", level='INFO')
+            self.log("="*80 + "\n", level='INFO')
+            
+            # Check backend health
+            if not self.check_backend_health():
+                self.log("❌ Backend is not running! Please start the backend first.", level='ERROR')
+                return
+            
+            start_time = time.time()
+            end_time = start_time + (self.duration_hours * 3600)
+            
+            experiment_id = 1
+            
+            self.log(f"🕐 Test will run until: {datetime.fromtimestamp(end_time).strftime('%Y-%m-%d %H:%M:%S')}", level='INFO')
+            self.log(f"⏰ Total duration: {self.duration_hours * 60} minutes\n", level='INFO')
+            
+            # Main testing loop - continues until duration expires or interrupted
+            cycle_count = 0
+            while time.time() < end_time and self.running:
+                cycle_count += 1
                 
-                # Test each intensity level
-                for intensity in CHAOS_TYPES[chaos_type]['intensities']:
+                # Print progress every iteration
+                elapsed = time.time() - start_time
+                remaining = end_time - time.time()
+                print(f"\n{'='*70}", flush=True)
+                print(f"⏱️  CYCLE #{cycle_count} | Progress: {elapsed/3600:.1f}h elapsed, {remaining/3600:.1f}h remaining", flush=True)
+                print(f"📊 Experiments completed: {self.total_chaos_experiments}, Total requests: {self.total_requests}", flush=True)
+                print(f"{'='*70}\n", flush=True)
+                
+                # Round-robin through all chaos types
+                for chaos_type in CHAOS_TYPES.keys():
                     if not self.running or time.time() >= end_time:
+                        print(f"⚠️  Stopping: running={self.running}, time_left={end_time - time.time():.1f}s", flush=True)
                         break
                     
-                    # Test each service
-                    for service in SERVICES:
+                    # Test each intensity level
+                    for intensity in CHAOS_TYPES[chaos_type]['intensities']:
                         if not self.running or time.time() >= end_time:
+                            print(f"⚠️  Stopping: running={self.running}, time_left={end_time - time.time():.1f}s", flush=True)
                             break
                         
-                        # Run chaos experiment
-                        self.run_experiment(experiment_id, chaos_type, intensity, service)
-                        experiment_id += 1
-                        
-                        # Normal period between experiments
-                        if self.running and time.time() < end_time:
-                            self.run_normal_period(self.normal_duration)
-        
-        # Generate final report
-        self.log("\n\n⏰ Test duration completed!", level='SUCCESS')
-        self.generate_final_report()
-        
-        self.log("\n" + "="*80, level='INFO')
-        self.log("🎉 CHAOS TESTING COMPLETE!", level='SUCCESS')
-        self.log("="*80, level='INFO')
+                        # Test each service
+                        for service in SERVICES:
+                            if not self.running or time.time() >= end_time:
+                                print(f"⚠️  Stopping: running={self.running}, time_left={end_time - time.time():.1f}s", flush=True)
+                                break
+                            
+                            # Check if we have enough time left for this experiment
+                            time_needed = self.chaos_duration + self.normal_duration + 60  # +60s buffer
+                            if time.time() + time_needed > end_time:
+                                self.log(f"\n⚠️  Skipping remaining experiments - not enough time (need {time_needed}s, have {end_time - time.time():.1f}s)", level='WARNING')
+                                # Don't break - just skip this one and continue
+                                continue
+                            
+                            # Run chaos experiment
+                            try:
+                                self.run_experiment(experiment_id, chaos_type, intensity, service)
+                                experiment_id += 1
+                            except KeyboardInterrupt:
+                                raise
+                            except Exception as e:
+                                self.log(f"❌ Experiment {experiment_id} failed: {e}", level='ERROR')
+                                import traceback
+                                traceback.print_exc()
+                                # Continue with next experiment
+                                experiment_id += 1
+                            
+                            # Normal period between experiments
+                            if self.running and time.time() < end_time:
+                                try:
+                                    self.run_normal_period(self.normal_duration)
+                                except Exception as e:
+                                    self.log(f"❌ Normal period failed: {e}", level='ERROR')
+            
+            # Generate final report
+            self.log("\n\n⏰ Test duration completed!", level='SUCCESS')
+            self.generate_final_report()
+            
+            self.log("\n" + "="*80, level='INFO')
+            self.log("🎉 CHAOS TESTING COMPLETE!", level='SUCCESS')
+            self.log("="*80, level='INFO')
+            
+        except KeyboardInterrupt:
+            self.log("\n\n🛑 Test interrupted by user", level='WARNING')
+            self.generate_final_report()
+        except Exception as e:
+            self.log(f"\n\n❌ Fatal error in main loop: {e}", level='ERROR')
+            import traceback
+            traceback.print_exc()
+            self.generate_final_report()
 
 def main():
     parser = argparse.ArgumentParser(
